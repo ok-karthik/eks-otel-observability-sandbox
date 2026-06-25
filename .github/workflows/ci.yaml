@@ -17,6 +17,7 @@ env:
   AWS_REGION: us-west-2
   GOLANG_APP_REPO: golang-checkout-service
   PYTHON_APP_REPO: python-payment-service
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
 jobs:
   build-and-push:
@@ -33,22 +34,21 @@ jobs:
       # ==============================================================================
       # Option A: Authenticate using AWS Secrets (Access Key ID & Secret Access Key)
       # ==============================================================================
-      - name: Configure AWS Credentials (IAM User Secrets)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+      # - name: Configure AWS Credentials (IAM User Secrets)
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ env.AWS_REGION }}
 
       # ==============================================================================
       # Option B: Authenticate using OIDC Role Federation (Recommended for Production)
-      # To use OIDC, comment out Option A, uncomment Option B, and configure the IAM Role.
       # ==============================================================================
-      # - name: Configure AWS Credentials (OIDC Role)
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecr-push-role
-      #     aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS Credentials (OIDC Role)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Log in to Amazon ECR
         id: login-ecr

@@ -22,12 +22,13 @@ graph TD
     end
     
     NodeAgent -->|Forward OTLP| CollectorGateway["Collector Gateway (Autoscaled Deployment)"]
-    CollectorGateway -->|Scrape Metrics / Redis Protocol| RedisPod["Redis Cache (ElastiCache Sim)"]
-
     
-    CollectorGateway -->|Store Traces| Tempo["Grafana Tempo / Honeycomb"]
-    CollectorGateway -->|Store Metrics| Prometheus["Amazon Managed Prometheus / Mimir"]
-    CollectorGateway -->|Store Logs| Loki["Grafana Loki"]
+    subgraph AWSServices["AWS Services"]
+        RedisPod["Redis Cache (ElastiCache Sim)"]
+    end
+
+    CollectorGateway -->|Scrape Metrics / Redis Protocol| RedisPod
+    CollectorGateway -->|Export Telemetry (Traces, Metrics, Logs)| Backends["LGTM / Datadog / Dynatrace<br/>and other OTel-compliant backends"]
 ```
 
 * **Local DaemonSet Agent**: Runs on every node to collect host metrics (`hostmetrics`) and enrich container spans with Kubernetes pod metadata (`k8sattributes`) locally.

@@ -1,0 +1,50 @@
+services:
+  # 1. Golang Checkout Service (Built from local source)
+  golang-app:
+    build:
+      context: ../apps/golang-app
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+      - PAYMENT_SERVICE_URL=http://python-app:8001
+    depends_on:
+      - lgtm
+      - python-app
+
+  # 2. Python Payment Service (Built from local source)
+  python-app:
+    build:
+      context: ../apps/python-app
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - OTEL_SERVICE_NAME=python-payment-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+    depends_on:
+      - lgtm
+      - redis-cache
+
+  # 3. Redis Cache Service (Simulating Amazon ElastiCache)
+  redis-cache:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  # 4. All-in-One LGTM Stack (OTel Collector + Prometheus + Tempo + Loki + Grafana)
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000" # Grafana Dashboard
+      - "4317:4317" # OTLP gRPC Ingress
+      - "4318:4318" # OTLP HTTP Ingress
+    volumes:
+      - ./collector-config.yaml:/otel-lgtm/otelcol-config.yaml
+

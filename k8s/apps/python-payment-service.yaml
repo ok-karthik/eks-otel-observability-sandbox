@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-payment-service
+  namespace: default
+  labels:
+    app: python-payment-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: python-payment-service
+  template:
+    metadata:
+      labels:
+        app: python-payment-service
+      annotations:
+        # ==================== OTel Auto-Instrumentation Injection ====================
+        # This annotation tells the OpenTelemetry Operator to dynamically inject
+        # the OTel SDK wrapper into this Python container during pod startup.
+        # It references the 'default-instrumentation' Instrumentation CRD we created.
+        instrumentation.opentelemetry.io/inject-python: "default-instrumentation"
+    spec:
+      containers:
+        - name: python-app
+          image: <YOUR_ECR_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/python-payment-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "python-payment-service"
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://$(HOST_IP):4317"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-app
+  namespace: default
+spec:
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 8001
+  selector:
+    app: python-payment-service

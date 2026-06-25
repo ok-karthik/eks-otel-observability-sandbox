@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: golang-checkout-service
+  namespace: default
+  labels:
+    app: golang-checkout-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: golang-checkout-service
+  template:
+    metadata:
+      labels:
+        app: golang-checkout-service
+    spec:
+      containers:
+        - name: golang-app
+          image: <YOUR_ECR_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/golang-checkout-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+          env:
+            - name: PORT
+              value: "8080"
+            - name: PAYMENT_SERVICE_URL
+              value: "http://python-app:8001"
+            
+            # ==================== EKS Downward API Trick ====================
+            # Since Go uses programmatic SDK setup, it needs to know the local 
+            # DaemonSet agent's endpoint. We use the Downward API to fetch the 
+            # Node IP (HOST_IP) where this pod is running, and direct our OTLP 
+            # SDK exporter to talk to that Node IP on port 4317.
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "$(HOST_IP):4317"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: golang-app
+  namespace: default
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: golang-checkout-service

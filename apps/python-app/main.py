@@ -1,10 +1,29 @@
+import os
 import time
 import logging
 from fastapi import FastAPI
+from pyroscope import configure as pyroscope_configure
+from pyroscope.otel import PyroscopeSpanProcessor
+from opentelemetry import trace
 
 # Standard Python logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize Pyroscope continuous profiling
+pyroscope_addr = os.getenv("PYROSCOPE_SERVER_ADDRESS")
+if not pyroscope_addr:
+    pyroscope_addr = "http://localhost:4040"
+
+logger.info(f"[Python App] Initializing Pyroscope profiling targeting: {pyroscope_addr}")
+pyroscope_configure(
+    application_name="python-payment-service",
+    server_address=pyroscope_addr,
+)
+
+# Attach PyroscopeSpanProcessor to the active tracer provider
+provider = trace.get_tracer_provider()
+provider.add_span_processor(PyroscopeSpanProcessor())
 
 app = FastAPI(title="Python Payment Service", version="1.0.0")
 

@@ -28,7 +28,7 @@ graph TD
     
     NodeAgent -->|Forward OTLP| CollectorGateway["Collector Gateway (Autoscaled Deployment)"]
     RedisPod -->|Scrape Metrics / Redis Protocol| CollectorGateway
-    CollectorGateway -->|Export Telemetry| Backends["Datadog / Dynatrace /<br/>Grafana LGTM / other OTel-compliant backends"]
+    CollectorGateway -->|Export Telemetry| Backends["Datadog / Dynatrace /<br/>Grafana LGTM & Pyroscope / other OTel-compliant backends"]
 ```
 
 * **Local DaemonSet Agent**: Runs on every node to collect host metrics (`hostmetrics`) and enrich container spans with Kubernetes pod metadata (`k8sattributes`) locally.
@@ -76,7 +76,7 @@ graph TD
 
 ## 💻 Running the Local Sandbox
 
-The local sandbox runs our Go checkout service, Python payment service, a Redis cache container, and the unified **`grafana/otel-lgtm`** container (which houses OTel Collector, Prometheus, Tempo, Loki, and Grafana).
+The local sandbox runs our Go checkout service, Python payment service, a Redis cache container, a **Grafana Pyroscope** container (for continuous profiling), and the unified **`grafana/otel-lgtm`** container (which houses OTel Collector, Prometheus, Tempo, Loki, and Grafana).
 
 ### 1. Start the Stack
 Spin up the local docker-compose stack:
@@ -101,6 +101,7 @@ make local-test
    ```promql
    redis_uptime_seconds_total
    ```
+6. To view continuous profiling data, open **Explore** and select **Pyroscope** as the datasource. Select `golang-checkout-service` or `python-payment-service` to view active CPU and memory profiling flame graphs. Trace spans also link directly to their corresponding execution profiles.
 
 ### 4. Stop the Stack
 ```bash

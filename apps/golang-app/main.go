@@ -16,6 +16,9 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
+
+	otelpyroscope "github.com/grafana/otel-profiling-go"
+	"github.com/grafana/pyroscope-go"
 )
 
 var tracer trace.Tracer
@@ -56,8 +59,8 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 		sdktrace.WithResource(res),
 	)
 
-	// Set global variables
-	otel.SetTracerProvider(tp)
+	// Set global variables wrapped with Pyroscope profiling provider
+	otel.SetTracerProvider(otelpyroscope.NewTracerProvider(tp))
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{}, // Standard W3C Trace Context
 		propagation.Baggage{},
@@ -68,6 +71,24 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 }
 
 func main() {
+	// Initialize Pyroscope continuous profiling
+	pyroscopeAddr := os.Getenv("PYROSCOPE_SERVER_ADDRESS")
+	if pyroscopeAddr == "" {
+		pyroscopeAddr = "http://localhost:4040"
+	}
+	log.Printf("Initializing Pyroscope profiling targeting: %s", pyroscopeAddr)
+	_, _ = pyroscope.Start(pyroscope.Config{
+		ApplicationName: "golang-checkout-service",
+		ServerAddress:   pyroscopeAddr,
+		ProfileTypes: []pyroscope.ProfileType{
+			pyroscope.ProfileCPU,
+			pyroscope.ProfileAllocObjects,
+			pyroscope.ProfileAllocSpace,
+			pyroscope.ProfileInuseObjects,
+			pyroscope.ProfileInuseSpace,
+		},
+	})
+
 	tp, err := initTracer()
 	if err != nil {
 		log.Fatalf("failed to initialize tracer: %v", err)

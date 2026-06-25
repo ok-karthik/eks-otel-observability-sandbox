@@ -10,9 +10,11 @@ services:
       - PORT=8080
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
       - PAYMENT_SERVICE_URL=http://python-app:8001
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     depends_on:
       - lgtm
       - python-app
+      - pyroscope
 
   # 2. Python Payment Service (Built from local source)
   python-app:
@@ -28,9 +30,11 @@ services:
       - OTEL_METRICS_EXPORTER=otlp
       - OTEL_LOGS_EXPORTER=otlp
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     depends_on:
       - lgtm
       - redis-cache
+      - pyroscope
 
   # 3. Redis Cache Service (Simulating Amazon ElastiCache)
   redis-cache:
@@ -47,4 +51,10 @@ services:
       - "4318:4318" # OTLP HTTP Ingress
     volumes:
       - ./collector-config.yaml:/otel-lgtm/otelcol-config.yaml
+
+  # 5. Continuous Profiling Backend (Pyroscope)
+  pyroscope:
+    image: grafana/pyroscope:latest
+    ports:
+      - "4040:4040"
 

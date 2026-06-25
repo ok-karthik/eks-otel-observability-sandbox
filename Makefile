@@ -7,7 +7,7 @@ CLUSTER_NAME ?= production-otel-demo-cluster
 AWS_REGION ?= us-east-1
 LOCAL_ENV_DIR = local-env
 
-.PHONY: help local-up local-down local-test k8s-context k8s-infra k8s-deploy k8s-undeploy k8s-deploy-raw k8s-undeploy-raw
+.PHONY: help local-up local-down local-test k8s-create k8s-destroy k8s-context k8s-infra k8s-deploy k8s-undeploy
 
 help: ## Show this help message
 	@echo "Usage: make [target]"
@@ -17,15 +17,15 @@ help: ## Show this help message
 	@echo "  local-down         Stop the local Docker Compose observability stack"
 	@echo "  local-test         Send test request to local Go app to generate traces"
 	@echo ""
-	@echo "AWS EKS Targets (OpenTelemetry Operator Method):"
+	@echo "AWS EKS Infrastructure Targets:"
+	@echo "  k8s-create         Create EKS cluster, node groups, and ECR repos using Terraform"
+	@echo "  k8s-destroy        Destroy EKS cluster and all associated AWS resources using Terraform"
 	@echo "  k8s-context        Update local kubeconfig to point to EKS cluster"
+	@echo ""
+	@echo "AWS EKS Targets (OpenTelemetry Operator Method):"
 	@echo "  k8s-infra          Install cert-manager, OTel operator, and AWS Ingress Controller on EKS"
 	@echo "  k8s-deploy         Apply K8s manifests for apps, Redis, and OTel operator configs"
 	@echo "  k8s-undeploy       Remove K8s manifests for apps, Redis, and OTel operator configs"
-	@echo ""
-	@echo "AWS EKS Targets (Raw Kubernetes Manifests Method - Operator-free):"
-	@echo "  k8s-deploy-raw     Apply Raw K8s configs (ConfigMaps, DaemonSet, Gateway Deployment)"
-	@echo "  k8s-undeploy-raw   Remove Raw K8s configs"
 
 local-up: ## Start local Docker Compose stack
 	cd $(LOCAL_ENV_DIR) && docker compose up --build -d
@@ -35,6 +35,12 @@ local-down: ## Stop local Docker Compose stack
 
 local-test: ## Send a curl request to Go app (generates traces)
 	curl -i http://localhost:8080/checkout
+
+k8s-create: ## Create AWS EKS cluster and ECR repositories using Terraform
+	cd terraform && terraform init && terraform apply
+
+k8s-destroy: ## Destroy AWS EKS cluster and ECR repositories using Terraform
+	cd terraform && terraform destroy
 
 k8s-context: ## Update kubeconfig context using AWS CLI
 	aws eks update-kubeconfig --region $(AWS_REGION) --name $(CLUSTER_NAME)
@@ -70,27 +76,4 @@ k8s-undeploy: ## Delete OTel Operator-based manifests
 	kubectl delete -f k8s/otel/otel-collector-daemonset.yaml --ignore-not-found=true
 	kubectl delete -f k8s/otel/otel-instrumentation.yaml --ignore-not-found=true
 
-k8s-deploy-raw: ## Apply Raw Kubernetes manifests (No Operator required)
-	@echo "Applying Namespace configurations..."
-	kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-	@echo "Applying Raw OTel ConfigMaps, DaemonSet, and Gateway Deployment..."
-	kubectl apply -f k8s/otel-raw/otel-agent-config.yaml
-	kubectl apply -f k8s/otel-raw/otel-agent-daemonset.yaml
-	kubectl apply -f k8s/otel-raw/otel-gateway-config.yaml
-	kubectl apply -f k8s/otel-raw/otel-gateway-deployment.yaml
-	@echo "Applying applications (Redis cache, Go checkout, Python payment)..."
-	kubectl apply -f k8s/apps/redis-cache.yaml
-	kubectl apply -f k8s/apps/golang-checkout-service.yaml
-	kubectl apply -f k8s/apps/python-payment-service.yaml
-	@echo "Applying ingress routing..."
-	kubectl apply -f k8s/ingress.yaml
 
-k8s-undeploy-raw: ## Delete Raw Kubernetes manifests
-	kubectl delete -f k8s/ingress.yaml --ignore-not-found=true
-	kubectl delete -f k8s/apps/golang-checkout-service.yaml --ignore-not-found=true
-	kubectl delete -f k8s/apps/python-payment-service.yaml --ignore-not-found=true
-	kubectl delete -f k8s/apps/redis-cache.yaml --ignore-not-found=true
-	kubectl delete -f k8s/otel-raw/otel-gateway-deployment.yaml --ignore-not-found=true
-	kubectl delete -f k8s/otel-raw/otel-gateway-config.yaml --ignore-not-found=true
-	kubectl delete -f k8s/otel-raw/otel-agent-daemonset.yaml --ignore-not-found=true
-	kubectl delete -f k8s/otel-raw/otel-agent-config.yaml --ignore-not-found=true

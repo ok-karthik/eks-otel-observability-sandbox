@@ -54,15 +54,10 @@ graph TD
 │   │   ├── golang-checkout-service.yaml
 │   │   ├── python-payment-service.yaml
 │   │   └── redis-cache.yaml
-│   ├── otel/                    # Option A: OpenTelemetry Operator resources
+│   ├── otel/                    # OpenTelemetry Operator resources
 │   │   ├── otel-instrumentation.yaml
 │   │   ├── otel-collector-daemonset.yaml
 │   │   └── otel-collector-gateway.yaml
-│   └── otel-raw/                # Option B: Raw K8s resources (Operator-free)
-│       ├── otel-agent-config.yaml
-│       ├── otel-agent-daemonset.yaml
-│       ├── otel-gateway-config.yaml
-│       └── otel-gateway-deployment.yaml
 ├── scripts/                     # Cluster bootstrapping installation scripts
 │   ├── install-cert-manager.sh
 │   ├── install-otel-operator.sh
@@ -120,17 +115,17 @@ make k8s-context CLUSTER_NAME=<cluster-name> AWS_REGION=<region>
 
 ---
 
-### Method A: Deploying with OpenTelemetry Operator (Recommended)
+### 2. Deploy OpenTelemetry Stack (using OpenTelemetry Operator)
 
 This method automates lifecycle management and auto-injection of OTel SDK wrappers into your pods using the official operator.
 
-#### 1. Install Operator Prerequisites
+#### A. Install Operator Prerequisites
 Install Cert-Manager, the OpenTelemetry Operator, and the AWS Application Load Balancer Ingress Controller:
 ```bash
 make k8s-infra CLUSTER_NAME=<cluster-name> AWS_REGION=<region>
 ```
 
-#### 2. Deploy Observability Infrastructure
+#### B. Deploy Observability Infrastructure
 Deploy the operator-based auto-instrumentation rules, collector daemonset, and gateway collector:
 ```bash
 make k8s-deploy
@@ -138,25 +133,8 @@ make k8s-deploy
 
 ---
 
-### Method B: Deploying with Raw Kubernetes Manifests (Operator-Free)
-
-This method has zero external dependencies (no Cert-Manager, no Helm charts, no operator controller). It uses standard Kubernetes ConfigMaps, DaemonSets, and Deployment/Service resources.
-
-#### 1. Install AWS Ingress Controller
-```bash
-CLUSTER_NAME=<cluster-name> AWS_REGION=<region> bash scripts/install-aws-alb-controller.sh
-```
-
-#### 2. Deploy Observability Infrastructure
-Deploy the standard ConfigMaps, DaemonSet agent (with pod-read RBAC roles), and Gateway Deployment/Service:
-```bash
-make k8s-deploy-raw
-```
-
----
-
 > [!IMPORTANT]
-> Make sure to update the image repositories in `k8s/apps/golang-checkout-service.yaml` and `k8s/apps/python-payment-service.yaml` to point to your AWS ECR Registry. Both methods deploy the same microservice application pods.
+> Make sure to update the image repositories in `k8s/apps/golang-checkout-service.yaml` and `k8s/apps/python-payment-service.yaml` to point to your AWS ECR Registry.
 
 ---
 

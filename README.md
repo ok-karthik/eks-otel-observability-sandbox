@@ -20,15 +20,14 @@ graph TD
         GoPod["Go Checkout Pod"] -->|Localhost / OTLP| NodeAgent["OTel Collector (DaemonSet)"]
         PyPod["Python Payment Pod"] -->|Localhost / OTLP| NodeAgent
     end
-    
-    NodeAgent -->|Forward OTLP| CollectorGateway["Collector Gateway (Autoscaled Deployment)"]
-    
+
     subgraph AWSServices["AWS Services"]
         RedisPod["Redis Cache (ElastiCache Sim)"]
     end
-
+    
+    NodeAgent -->|Forward OTLP| CollectorGateway["Collector Gateway (Autoscaled Deployment)"]
     CollectorGateway -->|Scrape Metrics / Redis Protocol| RedisPod
-    CollectorGateway -->|Export Telemetry| Backends["LGTM / Datadog / Dynatrace<br/>and other OTel-compliant backends"]
+    CollectorGateway -->|Export Telemetry| Backends["Datadog / Dynatrace /<br/>Grafana LGTM / other OTel-compliant backends"]
 ```
 
 * **Local DaemonSet Agent**: Runs on every node to collect host metrics (`hostmetrics`) and enrich container spans with Kubernetes pod metadata (`k8sattributes`) locally.

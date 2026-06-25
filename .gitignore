@@ -1,2 +1,11 @@
 **/.terraform
 **/.terragrunt
+
+# Terraform state files
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+
+# Terraform variables
+*.tfvars
+*.tfvars.json

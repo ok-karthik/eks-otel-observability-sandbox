@@ -1,6 +1,6 @@
-# 🚀 EKS & Local OpenTelemetry Observability Sandbox
+# EKS & Local OpenTelemetry Observability Sandbox
 
-This repository is a production-grade demo/prototype for running **OpenTelemetry (OTel)** on an **Amazon EKS cluster**, alongside a fully working **local sandbox** using Docker Compose.
+This repository is a production-ready reference implementation for running **OpenTelemetry (OTel)** on an **Amazon EKS cluster**, alongside a fully working **local sandbox** using Docker Compose.
 
 It demonstrates a multi-service distributed transaction:
 1. **Go Checkout Service** (`golang-app`): Serves as the entrypoint. When a request is triggered, it initializes a trace and makes an HTTP outbound call to the Payment service.
@@ -12,7 +12,7 @@ It demonstrates a multi-service distributed transaction:
 
 ## 🏗️ System Architecture (EKS Production Topology)
 
-For production EKS clusters, this demo/prototype defines a **two-tier collector topology**:
+For production EKS clusters, this reference architecture defines a **two-tier collector topology**:
 
 ```mermaid
 graph TD
@@ -28,7 +28,7 @@ graph TD
     end
 
     CollectorGateway -->|Scrape Metrics / Redis Protocol| RedisPod
-    CollectorGateway -->|Export Telemetry (Traces, Metrics, Logs)| Backends["LGTM / Datadog / Dynatrace<br/>and other OTel-compliant backends"]
+    CollectorGateway -->|Export Telemetry| Backends["LGTM / Datadog / Dynatrace<br/>and other OTel-compliant backends"]
 ```
 
 * **Local DaemonSet Agent**: Runs on every node to collect host metrics (`hostmetrics`) and enrich container spans with Kubernetes pod metadata (`k8sattributes`) locally.

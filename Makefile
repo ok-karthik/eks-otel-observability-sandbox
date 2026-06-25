@@ -4,7 +4,7 @@
 
 # Variables
 CLUSTER_NAME ?= production-otel-demo-cluster
-AWS_REGION ?= us-west-2
+AWS_REGION ?= us-east-1
 LOCAL_ENV_DIR = local-env
 
 .PHONY: help local-up local-down local-test k8s-context k8s-infra k8s-deploy k8s-undeploy k8s-deploy-raw k8s-undeploy-raw

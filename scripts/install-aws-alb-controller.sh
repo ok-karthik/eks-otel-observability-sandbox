@@ -11,7 +11,7 @@
 set -euo pipefail
 
 CLUSTER_NAME="${CLUSTER_NAME:-production-otel-demo-cluster}"
-AWS_REGION="${AWS_REGION:-us-west-2}"
+AWS_REGION="${AWS_REGION:-us-east-1}"
 
 echo "1. Downloading IAM policy for AWS Load Balancer Controller..."
 curl -fsSL -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.7.1/docs/install/iam_policy.json

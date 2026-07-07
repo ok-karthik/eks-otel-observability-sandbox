@@ -19,7 +19,7 @@ echo "Installing OpenTelemetry Operator..."
 # We set manager.collectorImage.repository to otel/opentelemetry-collector-contrib
 # because the default core image doesn't include the db scrapers (mysql, redis)
 # or advanced processors like k8sattributes and tail_sampling.
-helm install opentelemetry-operator open-telemetry/opentelemetry-operator \
+helm upgrade --install opentelemetry-operator open-telemetry/opentelemetry-operator \
   --set "manager.collectorImage.repository=otel/opentelemetry-collector-contrib" \
   --namespace opentelemetry-operator-system --create-namespace
 

@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-CLUSTER_NAME="${CLUSTER_NAME:-production-otel-demo-cluster}"
+CLUSTER_NAME="${CLUSTER_NAME:-otel-demo-cluster}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
 echo "1. Downloading IAM policy for AWS Load Balancer Controller..."

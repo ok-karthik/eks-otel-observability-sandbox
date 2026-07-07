@@ -1,0 +1,112 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel-collector-gateway
+  namespace: monitoring
+spec:
+  # Deployment mode enables replica scaling and HPA (Horizontal Pod Autoscaler)
+  mode: deployment
+  replicas: 1
+
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+      # ==================== Redis Receiver (ElastiCache Observability) ====================
+      # Scrapes performance metrics natively from the Redis instance running in the cluster.
+      redis:
+        endpoint: "redis-cache.default.svc.cluster.local:6379"
+        collection_interval: 10s
+
+    processors:
+      # Filter processor to discard noisy low-level HTTP transport spans
+      filter/drop_noisy_asgi:
+        error_mode: ignore
+        trace_conditions:
+          - 'IsMatch(span.name, "http send")'
+          - 'IsMatch(span.name, "http receive")'
+
+      # Memory Limiter protects the collector from crashing on trace spikes
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
+
+      # Tail sampling collects all spans of a trace before evaluating rules
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 10000
+        policies:
+          # Policy 1: Always keep errors (100% sampling rate)
+          - name: keep-errors
+            type: status_code
+            status_code: { status_codes: [ERROR] }
+          # Policy 2: Sample HTTP 200/OK at 100% rate in development
+          - name: sample-success
+            type: probabilistic
+            probabilistic: { sampling_percentage: 100.0 }
+          # Policy 3: Keep any trace that takes longer than 2 seconds (2000 ms)
+          - name: keep-latency-spikes
+            type: latency
+            latency: { threshold_ms: 2000 }
+          # Policy 4: Keep services, and discard the rest of services
+          - name: keep-checkout
+            type: string_attribute
+            string_attribute:
+              {
+                key: service.name,
+                values: ["php-checkout-service", "golang-checkout-service"],
+              }
+
+      batch:
+        send_batch_size: 8192
+        timeout: 1s
+
+      # Transform processor using OTTL (OpenTelemetry Transformation Language)
+      transform/standardize_http:
+        error_mode: ignore
+        trace_statements:
+          - context: span
+            statements:
+              # 1. Map http.status_code to http.response.status_code
+              - set(attributes["http.response.status_code"], attributes["http.status_code"]) where attributes["http.status_code"] != nil
+              - delete_key(attributes, "http.status_code")
+              # 2. Map http.method to http.request.method
+              - set(attributes["http.request.method"], attributes["http.method"]) where attributes["http.method"] != nil
+              - delete_key(attributes, "http.method")
+              # 3. Map http.target to url.path
+              - set(attributes["url.path"], attributes["http.target"]) where attributes["http.target"] != nil
+              - delete_key(attributes, "http.target")
+
+    exporters:
+      # Pushes metrics, traces, and logs directly to the local LGTM container in the cluster
+      otlp/lgtm:
+        endpoint: "lgtm.monitoring.svc.cluster.local:4317"
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors:
+            [
+              memory_limiter,
+              filter/drop_noisy_asgi,
+              transform/standardize_http,
+              batch,
+            ]
+          exporters: [otlp/lgtm]
+        metrics:
+          receivers: [otlp, redis]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/lgtm]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/lgtm]

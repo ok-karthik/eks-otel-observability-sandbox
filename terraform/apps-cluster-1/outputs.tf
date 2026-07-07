@@ -1,26 +1,26 @@
 output "cluster_name" {
   description = "The name of the EKS cluster"
-  value       = aws_eks_cluster.this.name
+  value       = module.eks.cluster_name
 }
 
 output "cluster_endpoint" {
   description = "The endpoint URL for the Kubernetes API server"
-  value       = aws_eks_cluster.this.endpoint
+  value       = module.eks.cluster_endpoint
 }
 
 output "cluster_arn" {
   description = "The ARN of the EKS cluster"
-  value       = aws_eks_cluster.this.arn
+  value       = module.eks.cluster_arn
 }
 
 output "node_group_name" {
   description = "The name of the managed worker node group"
-  value       = aws_eks_node_group.this.node_group_name
+  value       = "general"
 }
 
 output "kubeconfig_update_command" {
   description = "AWS CLI command to configure local kubectl context"
-  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.this.name}"
+  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
 }
 
 output "golang_checkout_service_repository_url" {
@@ -31,5 +31,20 @@ output "golang_checkout_service_repository_url" {
 output "python_payment_service_repository_url" {
   description = "The ECR repository URL for the Python payment service"
   value       = aws_ecr_repository.python_payment_service.repository_url
+}
+
+output "vpc_id" {
+  description = "The ID of the VPC"
+  value       = aws_vpc.main.id
+}
+
+output "private_route_table_id" {
+  description = "The ID of the private route table"
+  value       = aws_route_table.private.id
+}
+
+output "vpc_cidr" {
+  description = "The CIDR block of the VPC"
+  value       = local.vpc_cidr
 }
 

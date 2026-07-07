@@ -1,12 +1,24 @@
-apiVersion: opentelemetry.io/v1alpha1
+apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: otel-collector-agent
   namespace: monitoring
 spec:
-  # Runs one collector pod per EKS worker node.
   mode: daemonset
-  config: |
+  env:
+    - name: K8S_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+  volumeMounts:
+    - name: varlogpods
+      mountPath: /var/log/pods
+      readOnly: true
+  volumes:
+    - name: varlogpods
+      hostPath:
+        path: /var/log/pods
+  config:
     receivers:
       otlp:
         protocols:
@@ -14,11 +26,17 @@ spec:
             endpoint: 0.0.0.0:4317
           http:
             endpoint: 0.0.0.0:4318
-            
+      filelog:
+        include:
+          - /var/log/pods/*/*/*.log
+        exclude:
+          - /var/log/pods/monitoring_otel-collector-*/*/*.log
+        start_at: end
+
     processors:
-      batch:
-      
-      # The k8sattributes processor calls the K8s API to find the owner pod 
+      batch: {}
+
+      # The k8sattributes processor calls the K8s API to find the owner pod
       # of the incoming OTLP IP, adding crucial metadata tags to traces.
       k8sattributes:
         auth_type: "serviceAccount"
@@ -34,15 +52,15 @@ spec:
             - k8s.container.name
         pod_association:
           - sources:
-              - from: connection  # associates trace by client socket IP address
-              
+              - from: connection # associates trace by client socket IP address
+
     exporters:
       # Forwards enriched traces up to the centralized Autoscaled Gateway tier
       otlp:
-        endpoint: otel-collector-gateway.monitoring.svc.cluster.local:4317
+        endpoint: otel-collector-gateway-collector.monitoring.svc.cluster.local:4317
         tls:
           insecure: true
-          
+
     service:
       pipelines:
         traces:
@@ -51,5 +69,9 @@ spec:
           exporters: [otlp]
         metrics:
           receivers: [otlp]
+          processors: [k8sattributes, batch]
+          exporters: [otlp]
+        logs:
+          receivers: [otlp, filelog]
           processors: [k8sattributes, batch]
           exporters: [otlp]

@@ -34,6 +34,8 @@ graph TD
 * **Local DaemonSet Agent**: Runs on every node to collect host metrics (`hostmetrics`) and enrich container spans with Kubernetes pod metadata (`k8sattributes`) locally.
 * **Autoscaled Collector Gateway**: Collects the metrics/traces from the local agents, runs memory limiting, applies tail-based sampling rules, scrapes native metrics from our Redis Cache service, and forwards all telemetry data to the appropriate storage backends.
 
+> **Note on Scale**: For deployments spanning thousands of microservices across multiple geographic regions, the two-tier topology has limitations. See [Architecture Decisions and Tradeoffs](./architecture-decisions-and-tradeoffs.md) for a detailed comparison of scaling patterns (from Sidecars to Kafka-buffered Gateways) and recommendations for global enterprise deployments.
+
 ---
 
 ## 📁 Repository Layout

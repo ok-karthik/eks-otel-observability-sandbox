@@ -21,4 +21,7 @@ kubectl wait --namespace cert-manager \
   --selector=app.kubernetes.io/instance=cert-manager \
   --timeout=180s
 
+echo "Waiting an additional 10s for webhook endpoints to populate in kube-apiserver..."
+sleep 10
+
 echo "Cert-Manager is successfully installed and running!"

@@ -7,17 +7,7 @@ variable "aws_region" {
 variable "cluster_name" {
   description = "Name of the EKS cluster"
   type        = string
-  default     = "production-otel-demo-cluster"
-}
-
-variable "vpc_id" {
-  description = "VPC ID for EKS nodes and control plane elastic interfaces"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "List of private subnet IDs for EKS node interfaces"
-  type        = list(string)
+  default     = "otel-demo-cluster"
 }
 
 variable "node_group_name" {
@@ -35,7 +25,7 @@ variable "node_group_instance_types" {
 variable "node_group_desired_capacity" {
   description = "Initial number of nodes in the node group"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "node_group_min_size" {

@@ -57,7 +57,7 @@ spec:
     exporters:
       # Forwards enriched traces up to the centralized Autoscaled Gateway tier
       otlp:
-        endpoint: otel-collector-gateway-collector.monitoring.svc.cluster.local:4317
+        endpoint: k8s-monitori-otelcoll-caa8d45d58-27cbd82d28d9df8e.elb.us-east-1.amazonaws.com:4317
         tls:
           insecure: true
 
@@ -75,3 +75,28 @@ spec:
           receivers: [otlp, filelog]
           processors: [k8sattributes, batch]
           exporters: [otlp]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector-agent-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-agent-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector-agent-role
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector-agent-collector
+    namespace: monitoring

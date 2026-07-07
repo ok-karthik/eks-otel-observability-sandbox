@@ -100,7 +100,7 @@ resource "aws_nat_gateway" "nat" {
 # ==============================================================================
 # Route Tables
 # ==============================================================================
-resource "aws_route_table" "public" {
+resource "aws_route_table" "public_rt_otel" {
   vpc_id = aws_vpc.main.id
 
   route {
@@ -113,7 +113,7 @@ resource "aws_route_table" "public" {
   }
 }
 
-resource "aws_route_table" "private" {
+resource "aws_route_table" "private_rt_otel" {
   vpc_id = aws_vpc.main.id
 
   route {
@@ -132,11 +132,11 @@ resource "aws_route_table" "private" {
 resource "aws_route_table_association" "public" {
   count          = length(local.azs)
   subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
+  route_table_id = aws_route_table.public_rt_otel.id
 }
 
 resource "aws_route_table_association" "private" {
   count          = length(local.azs)
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private_rt_otel.id
 }

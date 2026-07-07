@@ -76,6 +76,7 @@ graph TD
 ## Pattern 3: DaemonSet -> Cluster Gateway -> Datadog
 
 DaemonSets act only as lightweight forwarders, sending data to a centralized OTel Gateway (a Kubernetes Deployment) running within the *same* EKS cluster.
+https://opentelemetry.io/docs/collector/architecture/#running-as-a-gateway 
 
 ```mermaid
 graph TD

@@ -28,6 +28,7 @@ help: ## Show this help message
 	@echo "  k8s-context          Update kubeconfig context for both EKS clusters"
 	@echo ""
 	@echo "Deploying Observability (Multi-Cluster):"
+	@echo "  k8s-deploy-all       Deploy both the Otel Gateway stack and the microservices stack"
 	@echo "  k8s-deploy-otel      Apply LGTM, Gateway, and LB Service to the otel-cluster"
 	@echo "  k8s-deploy-apps      Apply DaemonSet, Instrumentation, apps, and Redis to apps-cluster"
 	@echo "  k8s-undeploy-all     Remove manifests from both clusters"
@@ -75,24 +76,35 @@ k8s-context:
 # ==============================================================================
 # EKS Production Deployment Targets
 # ==============================================================================
+k8s-deploy-all: k8s-context k8s-deploy-otel k8s-deploy-apps ## Deploy everything to EKS in order
+
 k8s-deploy-otel:
+	@echo "Waiting for Cert-Manager in $(OTEL_CLUSTER)..."
+	kubectl --context $(OTEL_CLUSTER) wait --for=condition=Available --timeout=300s deployment/cert-manager-webhook -n cert-manager
+	@echo "Waiting for OTel Operator in $(OTEL_CLUSTER)..."
+	kubectl --context $(OTEL_CLUSTER) wait --for=condition=Available --timeout=300s deployment/opentelemetry-operator -n opentelemetry-operator-system
 	@echo "Applying Namespace in $(OTEL_CLUSTER)..."
 	kubectl --context $(OTEL_CLUSTER) create namespace monitoring --dry-run=client -o yaml | kubectl --context $(OTEL_CLUSTER) apply -f -
 	@echo "Applying LGTM stack in $(OTEL_CLUSTER)..."
 	kubectl --context $(OTEL_CLUSTER) apply -f k8s/otel-cluster/lgtm.yaml
+	@echo "Applying Ingress for Grafana in $(OTEL_CLUSTER)..."
+	kubectl --context $(OTEL_CLUSTER) apply -f k8s/otel-cluster/grafana-ingress.yaml
 	@echo "Applying Gateway in $(OTEL_CLUSTER)..."
 	kubectl --context $(OTEL_CLUSTER) apply -f k8s/otel-cluster/otel-collector-gateway.yaml
 	@echo "Exposing Gateway via AWS NLB in $(OTEL_CLUSTER)..."
 	kubectl --context $(OTEL_CLUSTER) apply -f k8s/otel-cluster/otel-collector-gateway-lb.yaml
 
 k8s-deploy-apps:
+	@echo "Waiting for Cert-Manager in $(APPS_CLUSTER)..."
+	kubectl --context $(APPS_CLUSTER) wait --for=condition=Available --timeout=300s deployment/cert-manager-webhook -n cert-manager
+	@echo "Waiting for OTel Operator in $(APPS_CLUSTER)..."
+	kubectl --context $(APPS_CLUSTER) wait --for=condition=Available --timeout=300s deployment/opentelemetry-operator -n opentelemetry-operator-system
 	@echo "Applying Namespace in $(APPS_CLUSTER)..."
 	kubectl --context $(APPS_CLUSTER) create namespace monitoring --dry-run=client -o yaml | kubectl --context $(APPS_CLUSTER) apply -f -
 	@echo "Applying OTel Agent & Instrumentation in $(APPS_CLUSTER)..."
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/otel-collector-daemonset.yaml
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps/otel-instrumentation.yaml
 	@echo "Applying Common Applications in $(APPS_CLUSTER)..."
-	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps/redis-cache.yaml
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps/golang-checkout-service.yaml
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps/python-payment-service.yaml
 	@echo "Applying Ingress in $(APPS_CLUSTER)..."
@@ -140,7 +152,6 @@ local-deploy-apps:
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/otel-collector-daemonset.yaml
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/apps/otel-instrumentation.yaml
 	@echo "Applying Common Applications..."
-	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/apps/redis-cache.yaml
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/apps/golang-checkout-service.yaml
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/apps/python-payment-service.yaml
 	@echo "Applying Ingress..."

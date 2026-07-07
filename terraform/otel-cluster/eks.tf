@@ -75,4 +75,16 @@ module "eks" {
 
   # 5. Enable access entries (Modern EKS auth)
   enable_cluster_creator_admin_permissions = true
+
+  # 6. Allow OTel traffic from peered Apps VPC
+  node_security_group_additional_rules = {
+    ingress_peering_otel = {
+      description = "Allow OTel traffic from peered Apps VPC"
+      protocol    = "tcp"
+      from_port   = 4317
+      to_port     = 4318
+      type        = "ingress"
+      cidr_blocks = ["10.0.0.0/16"]
+    }
+  }
 }

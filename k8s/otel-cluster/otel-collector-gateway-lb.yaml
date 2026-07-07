@@ -6,7 +6,7 @@ metadata:
   annotations:
     # Provisions a high-performance Network Load Balancer (NLB) in AWS
     service.beta.kubernetes.io/aws-load-balancer-type: "external"
-    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance" # Changed to instance to allow SNAT and resolve VPC peering asymmetric routing
     service.beta.kubernetes.io/aws-load-balancer-scheme: "internal" # Kept private inside the VPC
 
     # Enables topology aware routing in Kubernetes 1.27+

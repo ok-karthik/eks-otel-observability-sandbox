@@ -56,10 +56,6 @@ graph TD
 │   ├── local/                   # Kustomize overrides for local development
 │   ├── apps-cluster-1/          # EKS-specific manifests for apps cluster
 │   └── otel-cluster/            # EKS-specific manifests for observability cluster
-├── scripts/                     # Cluster bootstrapping installation scripts
-│   ├── install-cert-manager.sh
-│   ├── install-otel-operator.sh
-│   └── install-aws-alb-controller.sh
 └── local-env/                   # Local compose stack configs
     ├── docker-compose.yaml
     └── collector-config.yaml

@@ -30,7 +30,7 @@ output "vpc_id" {
 
 output "private_route_table_id" {
   description = "The ID of the private route table"
-  value       = aws_route_table.private.id
+  value       = aws_route_table.private_rt_otel.id
 }
 
 output "vpc_cidr" {

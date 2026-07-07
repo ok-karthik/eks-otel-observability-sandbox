@@ -23,8 +23,8 @@ spec:
     spec:
       containers:
         - name: python-app
-          image: python-payment-service:latest
-          imagePullPolicy: IfNotPresent
+          image: 508768430433.dkr.ecr.us-east-1.amazonaws.com/python-payment-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8001
           resources:

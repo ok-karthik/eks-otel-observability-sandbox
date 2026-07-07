@@ -18,7 +18,6 @@ This repository is an observability sandbox demonstrating **OpenTelemetry (OTel)
   - `k8s/otel-cluster/`: EKS-specific manifests for the dedicated observability cluster.
 - **`terraform/`**: Infrastructure as Code (IaC) for EKS and ECR resources, split into `apps-cluster-1` and `otel-cluster`.
 - **`architecture-decisions-and-tradeoffs.md`**: Scale architecture patterns and trade-offs document.
-- **`scripts/`**: Bootstrapping/installation scripts.
 
 ---
 

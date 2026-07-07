@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: golang-app
-          image: golang-checkout-service:latest
+          image: 508768430433.dkr.ecr.us-east-1.amazonaws.com/golang-checkout-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

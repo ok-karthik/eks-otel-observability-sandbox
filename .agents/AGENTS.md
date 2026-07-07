@@ -9,13 +9,15 @@ This document outlines the design principles, guidelines, and constraints for AI
 This repository is an observability sandbox demonstrating **OpenTelemetry (OTel)** integration for distributed transactions running both **locally** (Docker Compose + Grafana LGTM stack) and in **production** (Amazon EKS).
 
 ### Key Components:
-- **`apps/golang-app`**: A Go-based checkout service that initiates distributed trace waterfalls.
-- **`apps/python-app`**: A Python-based payment service that processes charges requested by the checkout service.
+- **`apps/`**: The `golang-app` (checkout) and `python-app` (payment) microservices.
 - **`local-env/`**: Docker Compose local development sandbox using `grafana/otel-lgtm`.
 - **`k8s/`**: Kubernetes configuration files.
-  - `k8s/apps/`: Resource definitions for the Go and Python microservices and the Redis cache simulation.
-  - `k8s/otel/`: OpenTelemetry Operator resources (Recommended topology).
-- **`terraform/`**: Infrastructure as Code (IaC) for EKS and ECR resources.
+  - `k8s/apps/`: Shared base manifests for the microservices and Redis.
+  - `k8s/local/`: Kustomize overrides for local development (Docker Compose / k3d).
+  - `k8s/apps-cluster-1/`: EKS-specific manifests for the application cluster.
+  - `k8s/otel-cluster/`: EKS-specific manifests for the dedicated observability cluster.
+- **`terraform/`**: Infrastructure as Code (IaC) for EKS and ECR resources, split into `apps-cluster-1` and `otel-cluster`.
+- **`architecture-decisions-and-tradeoffs.md`**: Scale architecture patterns and trade-offs document.
 - **`scripts/`**: Bootstrapping/installation scripts.
 
 ---

@@ -46,20 +46,16 @@ graph TD
 │       └── ci.yaml              # GitHub Actions CI build & push to ECR
 ├── Makefile                     # Root makefile wrapping local & EKS operations
 ├── README.md                    # This document
+├── architecture-decisions-and-tradeoffs.md # Scale architecture patterns and trade-offs
 ├── terraform/                   # AWS EKS control plane & node group infrastructure
-│   ├── main.tf                  # Cluster, nodes, access configurations & ECR repositories
-│   ├── variables.tf
-│   └── outputs.tf
+│   ├── main.tf                  # Base resources
+│   ├── apps-cluster-1/          # Application EKS cluster resources
+│   └── otel-cluster/            # Observability EKS cluster resources
 ├── k8s/                         # Kubernetes manifests
-│   ├── ingress.yaml             # Application load balancer ingress routing
-│   ├── apps/                    # Microservices and Redis cache manifests
-│   │   ├── golang-checkout-service.yaml
-│   │   ├── python-payment-service.yaml
-│   │   └── redis-cache.yaml
-│   ├── otel/                    # OpenTelemetry Operator resources
-│   │   ├── otel-instrumentation.yaml
-│   │   ├── otel-collector-daemonset.yaml
-│   │   └── otel-collector-gateway.yaml
+│   ├── apps/                    # Shared base manifests for microservices
+│   ├── local/                   # Kustomize overrides for local development
+│   ├── apps-cluster-1/          # EKS-specific manifests for apps cluster
+│   └── otel-cluster/            # EKS-specific manifests for observability cluster
 ├── scripts/                     # Cluster bootstrapping installation scripts
 │   ├── install-cert-manager.sh
 │   ├── install-otel-operator.sh

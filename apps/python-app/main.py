@@ -7,7 +7,7 @@ from fastapi import FastAPI
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Python Payment Service", version="1.0.0")
+app = FastAPI(title="Python Product Info Service", version="1.0.0")
 
 @app.get("/product-info")
 async def product_info():

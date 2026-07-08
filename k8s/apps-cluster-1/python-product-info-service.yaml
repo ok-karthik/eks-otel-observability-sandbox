@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: python-payment-service
+  name: python-product-info-service
   namespace: default
   labels:
-    app: python-payment-service
+    app: python-product-info-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: python-payment-service
+      app: python-product-info-service
   template:
     metadata:
       labels:
-        app: python-payment-service
+        app: python-product-info-service
       annotations:
         # ==================== OTel Auto-Instrumentation Injection ====================
         # This annotation tells the OpenTelemetry Operator to dynamically inject
@@ -23,8 +23,8 @@ spec:
     spec:
       containers:
         - name: python-app
-          image: 508768430433.dkr.ecr.us-east-1.amazonaws.com/python-payment-service:latest
-          imagePullPolicy: Always
+          image: 508768430433.dkr.ecr.us-east-1.amazonaws.com/python-product-info-service:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8001
           resources:
@@ -36,13 +36,15 @@ spec:
               memory: "128Mi"
           env:
             - name: OTEL_SERVICE_NAME
-              value: "python-payment-service"
+              value: "python-product-info-service"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector-agent-collector.monitoring.svc.cluster.local:4317"
             - name: OTEL_SEMCONV_STABILITY_OPT_IN
               value: "http"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: "grpc"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.version=1.0.0,deployment.environment=dev"
             - name: PYROSCOPE_SERVER_ADDRESS
               value: "http://pyroscope.monitoring.svc.cluster.local:4040"
 
@@ -58,4 +60,4 @@ spec:
       port: 8001
       targetPort: 8001
   selector:
-    app: python-payment-service
+    app: python-product-info-service

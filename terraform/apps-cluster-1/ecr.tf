@@ -3,7 +3,7 @@
 # ==============================================================================
 
 resource "aws_ecr_repository" "golang_checkout_service" {
-  name                 = "golang-checkout-service"
+  name                 = "golang-product-service"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
@@ -17,7 +17,7 @@ resource "aws_ecr_repository" "golang_checkout_service" {
 }
 
 resource "aws_ecr_repository" "python_payment_service" {
-  name                 = "python-payment-service"
+  name                 = "python-product-info-service"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 

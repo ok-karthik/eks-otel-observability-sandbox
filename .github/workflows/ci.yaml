@@ -15,8 +15,8 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  GOLANG_APP_REPO: golang-checkout-service
-  PYTHON_APP_REPO: python-payment-service
+  GOLANG_APP_REPO: golang-product-service
+  PYTHON_APP_REPO: python-product-info-service
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
 jobs:

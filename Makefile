@@ -106,8 +106,8 @@ k8s-deploy-apps:
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/otel-collector-daemonset.yaml
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/otel-instrumentation.yaml
 	@echo "Applying Common Applications in $(APPS_CLUSTER)..."
-	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/golang-checkout-service.yaml
-	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/python-payment-service.yaml
+	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/golang-product-service.yaml
+	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/python-product-info-service.yaml
 	@echo "Applying Ingress in $(APPS_CLUSTER)..."
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/ingress.yaml
 
@@ -153,8 +153,8 @@ local-deploy-apps:
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/otel-collector-daemonset.yaml
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/apps/otel-instrumentation.yaml
 	@echo "Applying Common Applications..."
-	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/apps/golang-checkout-service.yaml
-	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/apps/python-payment-service.yaml
+	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/apps/golang-product-service.yaml
+	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/apps/python-product-info-service.yaml
 	@echo "Applying Ingress..."
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/ingress.yaml
 

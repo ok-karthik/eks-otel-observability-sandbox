@@ -258,7 +258,7 @@ data:
           {
             "current": {
               "selected": true,
-              "value": "golang-checkout-service"
+              "value": "golang-product-service"
             },
             "name": "service",
             "query": "label_values(service_name)",
@@ -523,7 +523,7 @@ data:
           {
             "current": {
               "selected": true,
-              "value": "python-payment-service"
+              "value": "python-product-info-service"
             },
             "name": "service",
             "query": "label_values(service_name)",

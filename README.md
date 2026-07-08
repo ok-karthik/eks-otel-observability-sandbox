@@ -82,15 +82,15 @@ make local-test
 ### 3. Browse Telemetry in Grafana
 1. Open **[http://localhost:3000](http://localhost:3000)** (anonymous admin access is enabled).
 2. Go to **Explore** in the left sidebar and select **Tempo** as the datasource.
-3. Select **Search**, choose `golang-checkout-service` as the Service Name, and click **Run Query**.
+3. Select **Search**, choose `golang-product-service` as the Service Name, and click **Run Query**.
 4. Click on any trace in the list. You will see a distributed trace waterfall showing:
    - The Go service executing the checkout transaction.
-   - The child HTTP POST call crossing over to the `python-payment-service` to authorize the charge.
+   - The child HTTP POST call crossing over to the `python-product-info-service` to authorize the charge.
 5. To view scraped Redis cache metrics, switch the datasource to **Prometheus** and query:
    ```promql
    redis_uptime_seconds_total
    ```
-6. To view continuous profiling data, open **Explore** and select **Pyroscope** as the datasource. Select `golang-checkout-service` or `python-payment-service` to view active CPU and memory profiling flame graphs. Trace spans also link directly to their corresponding execution profiles.
+6. To view continuous profiling data, open **Explore** and select **Pyroscope** as the datasource. Select `golang-product-service` or `python-product-info-service` to view active CPU and memory profiling flame graphs. Trace spans also link directly to their corresponding execution profiles.
 
 ### 4. Stop the Stack
 ```bash
@@ -128,7 +128,7 @@ make k8s-deploy
 ---
 
 > [!IMPORTANT]
-> Make sure to update the image repositories in `k8s/apps/golang-checkout-service.yaml` and `k8s/apps/python-payment-service.yaml` to point to your AWS ECR Registry.
+> Make sure to update the image repositories in `k8s/apps/golang-product-service.yaml` and `k8s/apps/python-product-info-service.yaml` to point to your AWS ECR Registry.
 
 ---
 

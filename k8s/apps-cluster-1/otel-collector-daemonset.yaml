@@ -51,8 +51,8 @@ spec:
         log_statements:
           - context: log
             statements:
-              - set(attributes["service.name"], "golang-checkout-service") where IsMatch(attributes["log.file.path"], ".*/golang-app/.*")
-              - set(attributes["service.name"], "python-payment-service") where IsMatch(attributes["log.file.path"], ".*/python-app/.*")
+              - set(attributes["service.name"], "golang-product-service") where IsMatch(attributes["log.file.path"], ".*/golang-app/.*")
+              - set(attributes["service.name"], "python-product-info-service") where IsMatch(attributes["log.file.path"], ".*/python-app/.*")
 
       # The k8sattributes processor calls the K8s API to find the owner pod
       # of the incoming OTLP IP, adding crucial metadata tags to traces.

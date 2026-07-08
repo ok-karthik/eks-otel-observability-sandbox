@@ -62,7 +62,7 @@ spec:
             string_attribute:
               {
                 key: service.name,
-                values: ["php-checkout-service", "golang-checkout-service"],
+                values: ["php-checkout-service", "golang-product-service"],
               }
 
       batch:

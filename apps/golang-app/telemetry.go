@@ -33,7 +33,7 @@ func InitTelemetry(ctx context.Context) (func(context.Context) error, error) {
 	// 2. Define shared Resource Attributes (Service Name & Version)
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String("golang-checkout-service"),
+			semconv.ServiceNameKey.String("golang-product-service"),
 			semconv.ServiceVersionKey.String("1.0.0"),
 		),
 	)

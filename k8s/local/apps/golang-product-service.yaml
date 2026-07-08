@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: golang-checkout-service
+  name: golang-product-service
   namespace: default
   labels:
-    app: golang-checkout-service
+    app: golang-product-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: golang-checkout-service
+      app: golang-product-service
   template:
     metadata:
       labels:
-        app: golang-checkout-service
+        app: golang-product-service
     spec:
       containers:
         - name: golang-app
-          image: 508768430433.dkr.ecr.us-east-1.amazonaws.com/golang-checkout-service:latest
+          image: 508768430433.dkr.ecr.us-east-1.amazonaws.com/golang-product-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -57,4 +57,4 @@ spec:
       port: 8080
       targetPort: 8080
   selector:
-    app: golang-checkout-service
+    app: golang-product-service

@@ -32,6 +32,19 @@ spec:
             requests:
               cpu: "250m"
               memory: "512Mi"
+          volumeMounts:
+            - name: grafana-dashboards-provider
+              mountPath: /grafana/conf/provisioning/dashboards/dashboards.yaml
+              subPath: dashboards.yaml
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards
+      volumes:
+        - name: grafana-dashboards-provider
+          configMap:
+            name: lgtm-dashboards-provider
+        - name: grafana-dashboards
+          configMap:
+            name: lgtm-dashboards
 ---
 apiVersion: v1
 kind: Service

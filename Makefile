@@ -86,6 +86,7 @@ k8s-deploy-otel:
 	@echo "Applying Namespace in $(OTEL_CLUSTER)..."
 	kubectl --context $(OTEL_CLUSTER) create namespace monitoring --dry-run=client -o yaml | kubectl --context $(OTEL_CLUSTER) apply -f -
 	@echo "Applying LGTM stack in $(OTEL_CLUSTER)..."
+	kubectl --context $(OTEL_CLUSTER) apply -f k8s/otel-cluster/lgtm-dashboards.yaml
 	kubectl --context $(OTEL_CLUSTER) apply -f k8s/otel-cluster/lgtm.yaml
 	@echo "Applying Ingress for Grafana in $(OTEL_CLUSTER)..."
 	kubectl --context $(OTEL_CLUSTER) apply -f k8s/otel-cluster/grafana-ingress.yaml
@@ -103,16 +104,15 @@ k8s-deploy-apps:
 	kubectl --context $(APPS_CLUSTER) create namespace monitoring --dry-run=client -o yaml | kubectl --context $(APPS_CLUSTER) apply -f -
 	@echo "Applying OTel Agent & Instrumentation in $(APPS_CLUSTER)..."
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/otel-collector-daemonset.yaml
-	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps/otel-instrumentation.yaml
+	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/otel-instrumentation.yaml
 	@echo "Applying Common Applications in $(APPS_CLUSTER)..."
-	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps/golang-checkout-service.yaml
-	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps/python-payment-service.yaml
+	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/golang-checkout-service.yaml
+	kubectl --context $(APPS_CLUSTER) apply -f k8s/apps-cluster-1/python-payment-service.yaml
 	@echo "Applying Ingress in $(APPS_CLUSTER)..."
 	kubectl --context $(APPS_CLUSTER) apply -f k8s/ingress.yaml
 
 k8s-undeploy-all:
 	kubectl --context $(APPS_CLUSTER) delete -f k8s/ingress.yaml --ignore-not-found=true
-	kubectl --context $(APPS_CLUSTER) delete -f k8s/apps/ --ignore-not-found=true
 	kubectl --context $(APPS_CLUSTER) delete -f k8s/apps-cluster-1/ --ignore-not-found=true
 	kubectl --context $(OTEL_CLUSTER) delete -f k8s/otel-cluster/ --ignore-not-found=true
 
@@ -131,6 +131,7 @@ local-deploy-otel:
 	@echo "Applying Namespace in local k3d-$(OTEL_CLUSTER)..."
 	kubectl --context k3d-$(OTEL_CLUSTER) create namespace monitoring --dry-run=client -o yaml | kubectl --context k3d-$(OTEL_CLUSTER) apply -f -
 	@echo "Applying LGTM stack..."
+	kubectl --context k3d-$(OTEL_CLUSTER) apply -f k8s/otel-cluster/lgtm-dashboards.yaml
 	kubectl --context k3d-$(OTEL_CLUSTER) apply -f k8s/otel-cluster/lgtm.yaml
 	@echo "Applying Gateway..."
 	kubectl --context k3d-$(OTEL_CLUSTER) apply -f k8s/otel-cluster/otel-collector-gateway.yaml
@@ -150,16 +151,16 @@ local-deploy-apps:
 	kubectl --context k3d-$(APPS_CLUSTER) create namespace monitoring --dry-run=client -o yaml | kubectl --context k3d-$(APPS_CLUSTER) apply -f -
 	@echo "Applying local OTel Agent & Instrumentation..."
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/otel-collector-daemonset.yaml
-	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/apps/otel-instrumentation.yaml
+	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/apps/otel-instrumentation.yaml
 	@echo "Applying Common Applications..."
-	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/apps/golang-checkout-service.yaml
-	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/apps/python-payment-service.yaml
+	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/apps/golang-checkout-service.yaml
+	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/local/apps/python-payment-service.yaml
 	@echo "Applying Ingress..."
 	kubectl --context k3d-$(APPS_CLUSTER) apply -f k8s/ingress.yaml
 
 local-undeploy-all:
 	kubectl --context k3d-$(APPS_CLUSTER) delete -f k8s/ingress.yaml --ignore-not-found=true
-	kubectl --context k3d-$(APPS_CLUSTER) delete -f k8s/apps/ --ignore-not-found=true
+	kubectl --context k3d-$(APPS_CLUSTER) delete -f k8s/local/apps/ --ignore-not-found=true
 	kubectl --context k3d-$(APPS_CLUSTER) delete -f k8s/local/otel-collector-daemonset.yaml --ignore-not-found=true
 	kubectl --context k3d-$(OTEL_CLUSTER) delete -f k8s/otel-cluster/lgtm.yaml --ignore-not-found=true
 	kubectl --context k3d-$(OTEL_CLUSTER) delete -f k8s/otel-cluster/otel-collector-gateway.yaml --ignore-not-found=true

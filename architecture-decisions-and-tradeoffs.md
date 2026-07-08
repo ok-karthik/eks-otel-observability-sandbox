@@ -14,7 +14,7 @@ In this pattern, an OTel Collector runs as a sidecar container inside every sing
 
 ```mermaid
 graph TD
-    subgraph Region["AWS Region (e.g., us-east-1)"]
+    subgraph Region["AWS Region (us-east-1)"]
         subgraph EKSCluster["EKS Cluster"]
             subgraph PodA["App Pod A"]
                 AppA["Microservice A"] -->|Localhost / OTLP| SidecarA["OTel Sidecar"]
@@ -30,14 +30,10 @@ graph TD
 ```
 
 ### 🟩 Pros
-* Resource consumption is strictly tied to the application pod, avoiding noisy neighbor issues.
-* Direct routing to the backend removes intermediate network hops.
+* Resource isolation; no intermediate network hops.
 
 ### 🟥 Cons
-* Highly inefficient at scale due to paying the collector's baseline memory/CPU cost per pod.
-* Tail-based sampling is impossible because each sidecar only sees its own pod's spans.
-* High risk of connection overload and rate limiting due to thousands of individual network connections.
-* Updating collector configurations requires restarting every application pod.
+* High baseline cost (1 sidecar per pod); Tail-sampling impossible; Risk of API rate-limiting.
 
 ---
 
@@ -64,19 +60,16 @@ graph TD
 ```
 
 ### 🟩 Pros
-* Memory/CPU resource quota needed only per node, significantly reducing total overhead compared to sidecars.
-* Enables easy scraping of node-level infrastructure metrics via host volume mounts.
+* Lower overhead (1 agent per node); Enables host-level metrics.
 
 ### 🟥 Cons
-* Tail-based sampling remains impossible as the DaemonSet only sees spans for its specific node.
-* Traffic spikes can cause the DaemonSet to OOM and crash, dropping telemetry for all pods on that node.
+* Tail-sampling impossible; Traffic spikes crash the node agent, dropping data.
 
 ---
 
 ## Pattern 3: DaemonSet -> Cluster Gateway -> Datadog
 
 DaemonSets act only as lightweight forwarders, sending data to a centralized OTel Gateway (a Kubernetes Deployment) running within the *same* EKS cluster.
-https://opentelemetry.io/docs/collector/architecture/#running-as-a-gateway 
 
 ```mermaid
 graph TD
@@ -96,13 +89,10 @@ graph TD
 ```
 
 ### 🟩 Pros
-* Enables intelligent tail-based sampling since the Gateway sees all traffic within the cluster.
-* Centralizes backend API keys in the Gateway.
-* Aggressive batching and compression reduce egress costs to the backend.
+* Enables cluster-wide tail-sampling; Centralizes API keys; Reduces egress via batching.
 
 ### 🟥 Cons
-* High memory requirements for tail-sampling can starve application nodes if deployed on the same instances.
-* Tail-based sampling is inaccurate for transactions that cross multiple EKS clusters, as the Gateway only sees local cluster traffic.
+* High memory usage for tail-sampling can starve app pods if running on same nodes.
 
 ---
 
@@ -112,7 +102,7 @@ Application clusters run lightweight DaemonSets, which forward data over AWS Pri
 
 ```mermaid
 graph TD
-    subgraph Region["AWS Region (e.g., us-east-1)"]
+    subgraph Region["AWS Region (us-east-1)"]
         
         subgraph AppCluster1["App EKS Cluster 1"]
             App1["Apps"] --> DS1["DaemonSet"]
@@ -136,14 +126,10 @@ graph TD
 ```
 
 ### 🟩 Pros
-* Completely isolates heavy telemetry processing from production application workloads.
-* Enables perfect cross-cluster tail-based sampling by centralizing all regional traffic.
-* Protects application clusters from being affected by Gateway crashes or misconfigurations.
-* Allows the Observability cluster to use specialized AWS instances independently.
+* Perfect cross-cluster tail-sampling; Isolates heavy telemetry processing from apps.
 
 ### 🟥 Cons
-* Incurs cross-AZ data transfer charges, requiring careful topology-aware routing.
-* Increases operational complexity by requiring cross-VPC networking and a separate Kubernetes cluster.
+* Cross-AZ data transfer costs; Higher operational complexity.
 
 ---
 
@@ -155,7 +141,7 @@ To solve this, introduce **Apache Kafka (Amazon MSK)** as a persistent disk buff
 
 ```mermaid
 graph TD
-    subgraph Region["AWS Region (e.g., eu-west-1)"]
+    subgraph Region["AWS Region (us-east-1)"]
         
         subgraph AppClusters["Application EKS Clusters"]
             App["Apps"] --> DS["OTel DaemonSet"]
@@ -175,12 +161,8 @@ graph TD
     ProcessGateway --> Datadog["Datadog Cloud"]
 ```
 
-### How this solves the OOM / 20k Span Memory Limit:
-In this pattern, the `ProcessGateway` is split into multiple instances (managed by a Horizontal Pod Autoscaler). 
-1. If the `ProcessGateway` pods can only hold 20,000 spans in memory without crashing, they simply read from Kafka at a pace they can handle. Excess traffic safely queues up on Kafka's disk (which can hold billions of spans).
-2. As consumer lag builds up in Kafka, the HPA spins up more instances of the `ProcessGateway`, and the Kafka Consumer Group automatically balances the partition load across these new gateway instances.
-3. If the backend rate-limits your account, the Gateways simply slow their consumption from Kafka, resulting in zero data loss.
+### 🟩 Pros
+* Zero data loss during backend outages or massive traffic spikes; Kafka disk acts as a massive buffer preventing Gateway OOM crashes.
 
-### Why this architecture is highly resilient:
-1. **Separation of Concerns**: The `IngestGateway` is fast, stateless, and auto-scales instantly to write data to Kafka. The `ProcessGateway` performs heavy CPU/Memory work (tail sampling, scrubbing PII, metric aggregation) at a controlled rate.
-2. **Data Forking**: Telemetry can easily be sent to multiple backends simultaneously (e.g. Datadog for alerting, and an AWS S3 Data Lake for cheap long-term storage) by attaching another consumer to the Kafka topic.
+### 🟥 Cons
+* Highest operational complexity and infrastructure cost.

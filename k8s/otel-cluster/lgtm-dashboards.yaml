@@ -10,6 +10,10 @@ data:
         "list": []
       },
       "editable": true,
+      "time": {
+        "from": "now-15m",
+        "to": "now"
+      },
       "fiscalYearStartMonth": 0,
       "graphTooltip": 0,
       "id": 1,
@@ -25,7 +29,7 @@ data:
             "y": 0
           },
           "id": 101,
-          "title": "Go Golden Signal 1: Latency (P99)",
+          "title": "Latency (P99)",
           "type": "timeseries",
           "targets": [
             {
@@ -34,11 +38,16 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket{service_name=\"$service\"}[5m])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_duration_milliseconds_bucket{service_name=\"$service\"}[5m])) by (le))",
               "legendFormat": "P99 Latency (ms)",
               "refId": "A"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms"
+            }
+          }
         },
         {
           "collapsed": false,
@@ -49,7 +58,7 @@ data:
             "y": 0
           },
           "id": 102,
-          "title": "Go Golden Signal 2: Traffic (Throughput)",
+          "title": "Traffic (Throughput)",
           "type": "timeseries",
           "targets": [
             {
@@ -58,11 +67,21 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[5m]))",
+              "expr": "sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\"}[5m]))",
               "legendFormat": "Requests / sec",
               "refId": "A"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            }
+          }
         },
         {
           "collapsed": false,
@@ -73,7 +92,7 @@ data:
             "y": 8
           },
           "id": 103,
-          "title": "Go Golden Signal 3: Errors (HTTP 5xx Rate)",
+          "title": "Errors (HTTP 5xx Rate)",
           "type": "timeseries",
           "targets": [
             {
@@ -82,11 +101,16 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[5m])) * 100",
+              "expr": "sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\"}[5m])) * 100",
               "legendFormat": "Error Rate %",
               "refId": "A"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent"
+            }
+          }
         },
         {
           "collapsed": false,
@@ -96,8 +120,55 @@ data:
             "x": 12,
             "y": 8
           },
+          "id": 107,
+          "title": "HTTP Status Codes & Endpoints",
+          "type": "timeseries",
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(increase(http_server_duration_milliseconds_count{service_name=\"$service\", http_status_code!=\"404\"}[5m])) by (http_status_code, http_route, http_method)",
+              "legendFormat": "{{http_route}} ({{http_status_code}})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 80,
+                "lineInterpolation": "linear",
+                "lineWidth": 1
+              },
+              "unit": "short"
+            }
+          }
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 16
+          },
           "id": 104,
-          "title": "Go Golden Signal 4: Saturation (Active Connections / CPU Usage)",
+          "title": "Container CPU Usage",
           "type": "timeseries",
           "targets": [
             {
@@ -106,11 +177,45 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(rate(process_cpu_seconds_total{service_name=\"$service\"}[5m])) * 100",
-              "legendFormat": "CPU Saturation %",
+              "expr": "sum(container_cpu_usage{k8s_pod_name=~\"$service-.*\"})",
+              "legendFormat": "Container CPU Cores",
               "refId": "A"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores"
+            }
+          }
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          },
+          "id": 105,
+          "title": "Container Memory Usage",
+          "type": "timeseries",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(container_memory_working_set_bytes{k8s_pod_name=~\"$service-.*\"})",
+              "legendFormat": "Container Memory",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decbytes"
+            }
+          }
         },
         {
           "collapsed": false,
@@ -118,9 +223,9 @@ data:
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 16
+            "y": 24
           },
-          "id": 105,
+          "id": 106,
           "title": "Application Logs (Loki)",
           "type": "logs",
           "targets": [
@@ -132,7 +237,13 @@ data:
               "expr": "{service_name=\"$service\"}",
               "refId": "A"
             }
-          ]
+          ],
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
         }
       ],
       "refresh": "5s",
@@ -147,10 +258,10 @@ data:
           {
             "current": {
               "selected": true,
-              "value": "golang-checkout"
+              "value": "golang-checkout-service"
             },
             "name": "service",
-            "query": "label_values(http_server_request_duration_seconds_count, service_name)",
+            "query": "label_values(service_name)",
             "type": "query",
             "datasource": {
               "type": "prometheus",
@@ -169,6 +280,10 @@ data:
         "list": []
       },
       "editable": true,
+      "time": {
+        "from": "now-15m",
+        "to": "now"
+      },
       "fiscalYearStartMonth": 0,
       "graphTooltip": 0,
       "id": 2,
@@ -184,7 +299,7 @@ data:
             "y": 0
           },
           "id": 101,
-          "title": "Python Golden Signal 1: Latency (P99)",
+          "title": "Latency (P99)",
           "type": "timeseries",
           "targets": [
             {
@@ -197,7 +312,12 @@ data:
               "legendFormat": "P99 Latency (ms)",
               "refId": "A"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms"
+            }
+          }
         },
         {
           "collapsed": false,
@@ -208,7 +328,7 @@ data:
             "y": 0
           },
           "id": 102,
-          "title": "Python Golden Signal 2: Traffic (Throughput)",
+          "title": "Traffic (Throughput)",
           "type": "timeseries",
           "targets": [
             {
@@ -221,7 +341,12 @@ data:
               "legendFormat": "Requests / sec",
               "refId": "A"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            }
+          }
         },
         {
           "collapsed": false,
@@ -232,7 +357,7 @@ data:
             "y": 8
           },
           "id": 103,
-          "title": "Python Golden Signal 3: Errors (HTTP 5xx Rate)",
+          "title": "Errors (HTTP 5xx Rate)",
           "type": "timeseries",
           "targets": [
             {
@@ -245,7 +370,12 @@ data:
               "legendFormat": "Error Rate %",
               "refId": "A"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent"
+            }
+          }
         },
         {
           "collapsed": false,
@@ -255,8 +385,55 @@ data:
             "x": 12,
             "y": 8
           },
+          "id": 107,
+          "title": "HTTP Status Codes & Endpoints",
+          "type": "timeseries",
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(increase(http_server_request_duration_seconds_count{service_name=\"$service\"}[5m])) by (http_response_status_code, http_route)",
+              "legendFormat": "{{http_route}} ({{http_response_status_code}})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 80,
+                "lineInterpolation": "linear",
+                "lineWidth": 1
+              },
+              "unit": "short"
+            }
+          }
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 16
+          },
           "id": 104,
-          "title": "Python Golden Signal 4: Saturation (Memory Usage)",
+          "title": "Container CPU Usage",
           "type": "timeseries",
           "targets": [
             {
@@ -265,11 +442,45 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(process_memory_usage{service_name=\"$service\"})",
-              "legendFormat": "Memory Bytes",
+              "expr": "sum(container_cpu_usage{k8s_pod_name=~\"$service-.*\"})",
+              "legendFormat": "Container CPU Cores",
               "refId": "A"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores"
+            }
+          }
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          },
+          "id": 105,
+          "title": "Container Memory Usage",
+          "type": "timeseries",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(container_memory_working_set_bytes{k8s_pod_name=~\"$service-.*\"})",
+              "legendFormat": "Container Memory",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decbytes"
+            }
+          }
         },
         {
           "collapsed": false,
@@ -277,9 +488,9 @@ data:
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 16
+            "y": 24
           },
-          "id": 105,
+          "id": 106,
           "title": "Application Logs (Loki)",
           "type": "logs",
           "targets": [
@@ -291,7 +502,13 @@ data:
               "expr": "{service_name=\"$service\"}",
               "refId": "A"
             }
-          ]
+          ],
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
         }
       ],
       "refresh": "5s",
@@ -306,10 +523,10 @@ data:
           {
             "current": {
               "selected": true,
-              "value": "python-payment"
+              "value": "python-payment-service"
             },
             "name": "service",
-            "query": "label_values(http_server_request_duration_seconds_count, service_name)",
+            "query": "label_values(service_name)",
             "type": "query",
             "datasource": {
               "type": "prometheus",

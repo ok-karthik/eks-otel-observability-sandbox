@@ -33,7 +33,7 @@ spec:
     - http:
         paths:
           # Route 1: Application Entrypoint (Go Checkout service)
-          - path: /checkout
+          - path: /product
             pathType: Prefix
             backend:
               service:

@@ -30,7 +30,7 @@ In a Cloud-Native environment (e.g., using Grafana LGTM), the best practice is t
 
 ## Pattern 2: Centralized Unified Terraform 
 
-When migrating to or using SaaS observability vendors like Datadog or Dynatrace, organizations often start by creating a **Unified Terraform Repository** to manage all monitors and dashboards via Infrastructure as Code (IaC) (e.g., using the Datadog Terraform Provider).
+When migrating to or using SaaS observability vendors like Datadog or other, organizations often start by creating a **Unified Terraform Repository** to manage all monitors and dashboards via Infrastructure as Code (IaC) (e.g., using the Datadog Terraform Provider).
 
 ### How it works
 1. **The Platform Team** maintains a single massive Terraform repository.
@@ -40,7 +40,6 @@ When migrating to or using SaaS observability vendors like Datadog or Dynatrace,
 ### The challenges at scale
 * **The Monorepo Bottleneck:** With hundreds of teams submitting PRs to a single repo, CI/CD pipelines slow down, and Terraform state locking becomes a major friction point.
 * **Context Switching:** Developers have to switch from their application code repo to the infra repo just to tweak an alert threshold.
-* **Blast Radius:** A bad Terraform commit by one team can potentially corrupt the state or break observability resources for another team.
 
-### Bridging the gap with Operators (e.g., Datadog Operator)
+## Pattern 3: Datadog Operator
 If you are locked into a SaaS tool like Datadog but want the benefits of **Pattern 1**, you can use Kubernetes Operators designed for SaaS tools. For example, the **Datadog Operator** allows developers to define a `DatadogMonitor` CRD inside their application repository. The Operator then seamlessly syncs this CRD to the Datadog API, providing the scalability of Decentralized GitOps while using a SaaS backend.

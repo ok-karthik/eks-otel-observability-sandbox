@@ -43,6 +43,8 @@ spec:
               value: "http"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: "grpc"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.version=1.0.0,deployment.environment=dev"
             - name: PYROSCOPE_SERVER_ADDRESS
               value: "http://pyroscope.monitoring.svc.cluster.local:4040"
 

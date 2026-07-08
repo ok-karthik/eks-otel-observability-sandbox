@@ -9,19 +9,20 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Python Payment Service", version="1.0.0")
 
-@app.post("/process-payment")
-async def process_payment():
+@app.get("/product-info")
+async def product_info():
     # Because of auto-instrumentation, this log will be dynamically 
     # decorated with active trace_id and span_id by the OTel agent!
-    logger.info("[Python App] Entering process_payment handler...")
+    logger.info("[Python App] Entering product_info handler...")
     
-    time.sleep(80 / 1000)  # Simulate Stripe / Database transaction latency
+    time.sleep(80 / 1000)  # Simulate Database transaction latency
     
-    logger.info("[Python App] Payment successfully captured!")
+    logger.info("[Python App] Product info successfully retrieved!")
     return {
         "status": "success",
-        "gateway": "stripe",
-        "transaction_id": "tx_stripe_9941a"
+        "product_id": "prod_123",
+        "name": "OTel Observe Book",
+        "payment_status": "captured"
     }
 
 @app.get("/health")

@@ -31,10 +31,28 @@ spec:
           - /var/log/pods/*/*/*.log
         exclude:
           - /var/log/pods/monitoring_otel-collector-*/*/*.log
+        include_file_path: true
         start_at: end
+        operators:
+          - type: container
+      kubeletstats:
+        collection_interval: 10s
+        auth_type: "serviceAccount"
+        endpoint: "https://${env:K8S_NODE_NAME}:10250"
+        insecure_skip_verify: true
 
     processors:
       batch: {}
+      groupbyattrs:
+        keys:
+          - service.name
+      transform/logs:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(attributes["service.name"], "golang-checkout-service") where IsMatch(attributes["log.file.path"], ".*/golang-app/.*")
+              - set(attributes["service.name"], "python-payment-service") where IsMatch(attributes["log.file.path"], ".*/python-app/.*")
 
       # The k8sattributes processor calls the K8s API to find the owner pod
       # of the incoming OTLP IP, adding crucial metadata tags to traces.
@@ -68,12 +86,12 @@ spec:
           processors: [k8sattributes, batch]
           exporters: [otlp]
         metrics:
-          receivers: [otlp]
+          receivers: [otlp, kubeletstats]
           processors: [k8sattributes, batch]
           exporters: [otlp]
         logs:
           receivers: [otlp, filelog]
-          processors: [k8sattributes, batch]
+          processors: [k8sattributes, transform/logs, groupbyattrs, batch]
           exporters: [otlp]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -82,7 +100,7 @@ metadata:
   name: otel-collector-agent-role
 rules:
   - apiGroups: [""]
-    resources: ["pods", "namespaces", "nodes"]
+    resources: ["pods", "namespaces", "nodes", "nodes/stats", "nodes/proxy"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
     resources: ["replicasets"]

@@ -35,6 +35,8 @@ spec:
               value: "http://python-app:8001"
             - name: OTEL_SEMCONV_STABILITY_OPT_IN
               value: "http"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.version=1.0.0,deployment.environment=dev"
             - name: PYROSCOPE_SERVER_ADDRESS
               value: "http://pyroscope.monitoring.svc.cluster.local:4040"
 

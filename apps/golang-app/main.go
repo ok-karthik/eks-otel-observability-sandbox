@@ -27,12 +27,8 @@ func main() {
 		}
 	}()
 
-	// Route handler
-	http.HandleFunc("/checkout", handleCheckout)
-
-	// Wrap our HTTP server handler with OTel middleware
-	// This automatically creates a span for every incoming request!
-	otelHandler := otelhttp.NewHandler(http.DefaultServeMux, "ingress_request")
+	// Route handler wrapped with OTel middleware to set the http.route attribute
+	http.Handle("/product", otelhttp.NewHandler(http.HandlerFunc(handleProduct), "GET /product"))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -40,13 +36,13 @@ func main() {
 	}
 
 	log.Printf("Go application listening on port %s...", port)
-	if err := http.ListenAndServe(":"+port, otelHandler); err != nil {
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func handleCheckout(w http.ResponseWriter, r *http.Request) {
-	log.Println("[Go App] Starting checkout flow...")
+func handleProduct(w http.ResponseWriter, r *http.Request) {
+	log.Println("[Go App] Fetching product info...")
 	time.Sleep(50 * time.Millisecond) // Simulate some work
 
 	// Call the Python Payment Service
@@ -55,10 +51,9 @@ func handleCheckout(w http.ResponseWriter, r *http.Request) {
 		pythonAppURL = "http://python-app:8001"
 	}
 
-	// The Python payment service endpoint is a POST request.
-	// We use otelhttp.Post to send a POST request with context propagation.
-	log.Printf("[Go App] Calling payment service: %s/process-payment", pythonAppURL)
-	resp, err := otelhttp.Post(r.Context(), pythonAppURL+"/process-payment", "application/json", nil)
+	// We use otelhttp.Get to send a GET request with context propagation.
+	log.Printf("[Go App] Calling payment service: %s/product-info", pythonAppURL)
+	resp, err := otelhttp.Get(r.Context(), pythonAppURL+"/product-info")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Payment call failed: %v", err), http.StatusInternalServerError)
 		return
@@ -70,6 +65,7 @@ func handleCheckout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Checkout successful and payment processed!"))
+	w.Write([]byte(`{"status": "success", "product_id": "prod_123", "name": "OTel Observe Book", "payment_status": "captured"}`))
 }

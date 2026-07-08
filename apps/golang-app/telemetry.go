@@ -1,0 +1,101 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+)
+
+// InitTelemetry initializes both OpenTelemetry tracing and metrics.
+// It returns a shutdown function to be deferred in main.
+func InitTelemetry(ctx context.Context) (func(context.Context) error, error) {
+	// 1. Resolve collector endpoint
+	collectorAddr := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if collectorAddr == "" {
+		collectorAddr = "otel-collector:4317"
+	}
+
+	// Clean up scheme prefixes (http:// or https://) for gRPC connection
+	collectorAddr = strings.TrimPrefix(collectorAddr, "http://")
+	collectorAddr = strings.TrimPrefix(collectorAddr, "https://")
+
+	// 2. Define shared Resource Attributes (Service Name & Version)
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String("golang-checkout-service"),
+			semconv.ServiceVersionKey.String("1.0.0"),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
+
+	// ==================== TRACING SETUP ====================
+	traceExporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint(collectorAddr),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(traceExporter),
+		sdktrace.WithResource(res),
+	)
+	otel.SetTracerProvider(tp)
+
+	// Ensure W3C Trace Context headers propagate transparently in HTTP calls
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
+	// ==================== METRICS SETUP ====================
+	metricExporter, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithInsecure(),
+		otlpmetricgrpc.WithEndpoint(collectorAddr),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create metric exporter: %w", err)
+	}
+
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
+		sdkmetric.WithResource(res),
+	)
+	otel.SetMeterProvider(mp)
+
+	// ==================== SHUTDOWN HANDLER ====================
+	shutdown := func(shutdownCtx context.Context) error {
+		var shutdownErrors []string
+
+		log.Println("[Telemetry] Flushing and shutting down Meter Provider...")
+		if err := mp.Shutdown(shutdownCtx); err != nil {
+			shutdownErrors = append(shutdownErrors, fmt.Sprintf("meter provider shutdown error: %v", err))
+		}
+
+		log.Println("[Telemetry] Flushing and shutting down Tracer Provider...")
+		if err := tp.Shutdown(shutdownCtx); err != nil {
+			shutdownErrors = append(shutdownErrors, fmt.Sprintf("tracer provider shutdown error: %v", err))
+		}
+
+		if len(shutdownErrors) > 0 {
+			return fmt.Errorf("errors during telemetry shutdown: %s", strings.Join(shutdownErrors, "; "))
+		}
+		return nil
+	}
+
+	return shutdown, nil
+}

@@ -1,4 +1,8 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lgtm-dashboards
+  namespace: monitoring
 data:
   go-service-dashboard.json: |
     {
@@ -27,10 +31,10 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "mimir"
+                "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.99, sum(rate(http_server_duration_milliseconds_bucket{service_name=\"$service\"}[5m])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket{service_name=\"$service\"}[5m])) by (le)) * 1000",
               "legendFormat": "P99 Latency (ms)",
               "refId": "A"
             }
@@ -51,10 +55,10 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "mimir"
+                "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\"}[5m]))",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[5m]))",
               "legendFormat": "Requests / sec",
               "refId": "A"
             }
@@ -75,10 +79,10 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "mimir"
+                "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\"}[5m])) * 100",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[5m])) * 100",
               "legendFormat": "Error Rate %",
               "refId": "A"
             }
@@ -99,7 +103,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "mimir"
+                "uid": "prometheus"
               },
               "editorMode": "code",
               "expr": "sum(rate(process_cpu_seconds_total{service_name=\"$service\"}[5m])) * 100",
@@ -146,11 +150,11 @@ data:
               "value": "golang-checkout"
             },
             "name": "service",
-            "query": "label_values(http_server_duration_milliseconds_count, service_name)",
+            "query": "label_values(http_server_request_duration_seconds_count, service_name)",
             "type": "query",
             "datasource": {
               "type": "prometheus",
-              "uid": "mimir"
+              "uid": "prometheus"
             },
             "refresh": 1
           }
@@ -186,10 +190,10 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "mimir"
+                "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.99, sum(rate(http_server_duration_milliseconds_bucket{service_name=\"$service\"}[5m])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket{service_name=\"$service\"}[5m])) by (le)) * 1000",
               "legendFormat": "P99 Latency (ms)",
               "refId": "A"
             }
@@ -210,10 +214,10 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "mimir"
+                "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\"}[5m]))",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[5m]))",
               "legendFormat": "Requests / sec",
               "refId": "A"
             }
@@ -234,10 +238,10 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "mimir"
+                "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_duration_milliseconds_count{service_name=\"$service\"}[5m])) * 100",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[5m])) * 100",
               "legendFormat": "Error Rate %",
               "refId": "A"
             }
@@ -258,7 +262,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "mimir"
+                "uid": "prometheus"
               },
               "editorMode": "code",
               "expr": "sum(process_memory_usage{service_name=\"$service\"})",
@@ -305,11 +309,11 @@ data:
               "value": "python-payment"
             },
             "name": "service",
-            "query": "label_values(http_server_duration_milliseconds_count, service_name)",
+            "query": "label_values(http_server_request_duration_seconds_count, service_name)",
             "type": "query",
             "datasource": {
               "type": "prometheus",
-              "uid": "mimir"
+              "uid": "prometheus"
             },
             "refresh": 1
           }
@@ -318,11 +322,12 @@ data:
       "title": "Python Golden Signals Service Dashboard (Unified)",
       "version": 1
     }
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: lgtm-dashboards
+  name: lgtm-dashboards-provider
   namespace: monitoring
-apiVersion: v1
 data:
   dashboards.yaml: |
     apiVersion: 1
@@ -335,7 +340,3 @@ data:
         updateIntervalSeconds: 10
         options:
           path: /var/lib/grafana/dashboards
-kind: ConfigMap
-metadata:
-  name: lgtm-dashboards-provider
-  namespace: monitoring

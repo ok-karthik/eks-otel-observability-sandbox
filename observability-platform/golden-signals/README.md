@@ -21,4 +21,4 @@ These templates have been designed as **Unified Panes of Glass**. They do not ju
 In this sandbox repository, these JSON files are automatically mounted into the local Grafana instance via the Grafana Provisioning config (`local-env/grafana/provisioning/dashboards/dashboards.yaml`).
 
 **2. Production Kubernetes (Grafana Operator):**
-In a production environment, you would not mount JSON files manually. Instead, you would use the `GrafanaDashboard` Custom Resource Definition (CRD), as demonstrated in the `dashboard-and-alert-generators/` directory. The JSON payload of these templates is embedded directly into the CRD by the Helm chart.
+In a production environment, you would not mount JSON files manually. Instead, we could use the `GrafanaDashboard` Custom Resource Definition (CRD), as demonstrated in the `dashboard-and-alert-generators/` directory. The JSON payload of these templates is embedded directly into the CRD by the Helm chart.

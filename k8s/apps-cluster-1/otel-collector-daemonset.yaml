@@ -57,7 +57,7 @@ spec:
     exporters:
       # Forwards enriched traces up to the centralized Autoscaled Gateway tier
       otlp:
-        endpoint: k8s-monitori-otelcoll-caa8d45d58-27cbd82d28d9df8e.elb.us-east-1.amazonaws.com:4317
+        endpoint: k8s-monitori-otelcoll-a9cb0ce700-1768505ab18eabbc.elb.us-east-1.amazonaws.com:4317
         tls:
           insecure: true
 

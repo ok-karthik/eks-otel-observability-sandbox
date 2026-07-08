@@ -6,75 +6,26 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-// 1. Initialize OpenTelemetry Tracer
-func initTracer() (*sdktrace.TracerProvider, error) {
-	ctx := context.Background()
-
-	// Get collector endpoint (e.g. otel-collector:4317 or lgtm:4317)
-	collectorAddr := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	if collectorAddr == "" {
-		collectorAddr = "otel-collector:4317"
-	}
-
-	// Clean up scheme prefixes (http:// or https://) for gRPC connection
-	collectorAddr = strings.TrimPrefix(collectorAddr, "http://")
-	collectorAddr = strings.TrimPrefix(collectorAddr, "https://")
-
-	// Create gRPC exporter to send traces to the collector
-	exporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithInsecure(),
-		otlptracegrpc.WithEndpoint(collectorAddr),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Define our Service Name and Version resource attributes
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String("golang-checkout-service"),
-			semconv.ServiceVersionKey.String("1.0.0"),
-		),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create and register the Tracer Provider
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(res),
-	)
-	otel.SetTracerProvider(tp)
-
-	// Ensure W3C Trace Context headers propagate transparently in HTTP calls
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-		propagation.TraceContext{},
-		propagation.Baggage{},
-	))
-
-	return tp, nil
-}
-
 func main() {
-	// Initialize OTel
-	tp, err := initTracer()
+	// Initialize OTel Telemetry (Traces & Metrics)
+	ctx := context.Background()
+	shutdown, err := InitTelemetry(ctx)
 	if err != nil {
-		log.Fatalf("failed to initialize tracer: %v", err)
+		log.Fatalf("failed to initialize telemetry: %v", err)
 	}
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		// Use a separate context for shutdown with a timeout to prevent hanging on exit
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdown(shutdownCtx); err != nil {
+			log.Printf("Error shutting down telemetry: %v", err)
+		}
+	}()
 
 	// Route handler
 	http.HandleFunc("/checkout", handleCheckout)

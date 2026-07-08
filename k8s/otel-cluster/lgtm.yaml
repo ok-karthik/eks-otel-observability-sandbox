@@ -34,7 +34,7 @@ spec:
               memory: "512Mi"
           volumeMounts:
             - name: grafana-dashboards-provider
-              mountPath: /grafana/conf/provisioning/dashboards/dashboards.yaml
+              mountPath: /otel-lgtm/grafana/conf/provisioning/dashboards/dashboards.yaml
               subPath: dashboards.yaml
             - name: grafana-dashboards
               mountPath: /var/lib/grafana/dashboards

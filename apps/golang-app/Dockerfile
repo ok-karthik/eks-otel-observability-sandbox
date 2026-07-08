@@ -4,8 +4,8 @@ WORKDIR /app
 
 # Copy the go.mod first
 COPY go.mod ./
-# Copy main.go so go mod tidy can detect dependencies
-COPY main.go ./
+# Copy source files so go mod tidy can detect dependencies and build the binary
+COPY main.go telemetry.go ./
 
 # Run go mod tidy to dynamically resolve dependencies and write a complete go.sum
 RUN go mod tidy

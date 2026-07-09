@@ -1,3 +1,4 @@
+import os
 from diagrams import Cluster, Diagram, Edge
 from diagrams.aws.compute import EKS
 from diagrams.aws.network import ALB, VPCPeering, NLB
@@ -7,7 +8,11 @@ from diagrams.onprem.monitoring import Grafana, Prometheus
 from diagrams.onprem.logging import Loki
 from diagrams.custom import Custom
 
-with Diagram("EKS OTel Observability Platform", show=False, filename=".github/assets/aws_architecture", outformat="png"):
+script_dir = os.path.dirname(os.path.abspath(__file__))
+diagram_filename = os.path.join(script_dir, "aws_architecture")
+tempo_icon_path = os.path.join(script_dir, "tempo.png")
+
+with Diagram("EKS OTel Observability Platform", show=False, filename=diagram_filename, outformat="png"):
     users = Users("Users")
 
     with Cluster("VPC 1: Apps Workload"):
@@ -34,7 +39,7 @@ with Diagram("EKS OTel Observability Platform", show=False, filename=".github/as
                 grafana = Grafana("Grafana")
                 prometheus = Prometheus("Prometheus")
                 loki = Loki("Loki")
-                tempo = Custom("Tempo", ".github/assets/tempo.png")
+                tempo = Custom("Tempo", tempo_icon_path)
                 
                 grafana >> prometheus
                 grafana >> loki

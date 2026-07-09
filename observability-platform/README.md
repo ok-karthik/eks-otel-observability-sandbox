@@ -1,62 +1,44 @@
-# Observability as a Product (OaaP) Platform
+# Observability Platform Templates
 
-Treating observability as an internal product with zero-friction onboarding for developers.
+This folder is the "how this scales to 1000+ services" part of the demo. Treat it as the platform team's reusable template library, separate from the sample workload application.
 
-## 🚀 Platform Capabilities
+## What Lives Here
 
-* **[GitOps Alerting & Dashboards](file:///Users/karthik.orugonda/github/eks-otel-observability-sandbox/observability-platform/dashboard-and-alert-generators/README.md)**: Developers define alerts via simple Helm `values.yaml` which auto-generates Prometheus/Grafana CRDs.
-* **[Golden Signals Templates](file:///Users/karthik.orugonda/github/eks-otel-observability-sandbox/observability-platform/golden-signals/README.md)**: Standardized health dashboards (Latency, Traffic, Errors, Saturation) for [Go](file:///Users/karthik.orugonda/github/eks-otel-observability-sandbox/observability-platform/golden-signals/go-service-dashboard.json) and [Python](file:///Users/karthik.orugonda/github/eks-otel-observability-sandbox/observability-platform/golden-signals/python-service-dashboard.json).
-* **[Cost Control & Multi-Tenancy](file:///Users/karthik.orugonda/github/eks-otel-observability-sandbox/observability-platform/routing-and-multitenancy/otel-gateway-multitenant.yaml)**: Gateway-level tail-sampling (retain 100% of errors, 5% of healthy traffic) and tenant-based routing.
+- [k8s-manifests](./k8s-manifests): deployable observability-cluster manifests for LGTM, Pyroscope, Grafana ingress, and the OTel Gateway.
+- [golden-signals](./golden-signals): reusable dashboards for latency, traffic, errors, and saturation.
+- [telemetry-budgeting](./telemetry-budgeting): tail-sampling and filtering examples for cost and cardinality control.
+- [routing-and-multitenancy](./routing-and-multitenancy): collector routing patterns for teams, tenants, environments, and backend separation.
+- [dashboard-and-alert-generators](./dashboard-and-alert-generators): Helm-driven dashboard and alert generation patterns.
 
----
+## Interview Talk Track
 
-## 💾 AWS Storage Architecture Comparisons
+For a large company running services across US, EU, and Australia, I would not send all telemetry to one global collector. I would deploy this platform per region:
 
-All architectures below use **Pattern 4** (Dedicated Regional Gateway Cluster). 
+1. Workload clusters run lightweight OTel Collector DaemonSets.
+2. DaemonSets enrich telemetry with Kubernetes metadata and forward to a private regional observability cluster.
+3. Regional OTel Gateway fleets apply shared policy: memory limits, filtering, batching, tail sampling, routing, and backend export.
+4. Teams onboard by adding standard labels/resource attributes and using dashboard/alert templates through GitOps.
+5. Critical traces are preserved while healthy high-volume traffic is sampled down to manage cost.
 
-### A: Commercial SaaS (Datadog / Dynatrace)
+## Scale Evolution
 
-```mermaid
-flowchart LR
-    A[EKS Apps Cluster] -->|OTLP| B[EKS Observability Cluster\nOTel Gateway]
-    AWS[Other AWS Services] -->|CloudWatch Metric Streams| B
-    B -->|OTLP over HTTPS| C((Datadog / Dynatrace))
-    
-    style C fill:#f96,stroke:#333,stroke-width:2px
+```text
+Small demo:
+apps cluster -> daemonset collector -> observability gateway -> LGTM
+
+Enterprise regional platform:
+many app clusters -> regional ingestion gateways -> processing gateways -> Datadog/Dynatrace/LGTM/AMP
+
+High burst or backend outage protection:
+many app clusters -> ingestion gateways -> Kafka/MSK buffer -> processing gateways -> backends
 ```
-* **🟩 Pros**: Zero infra management. Native AIOps.
-* **🟥 Cons**: Very expensive at scale without aggressive telemetry budgeting.
 
-### B: Self-Hosted LGTM (Mimir, Tempo, Loki)
+## Ownership Model
 
-```mermaid
-flowchart LR
-    A[EKS Apps Cluster] -->|OTLP| B[EKS Observability Cluster\nOTel Gateway]
-    AWS[Other AWS Services] -->|CloudWatch Metric Streams| B
-    B -->|gRPC| C(Grafana Mimir)
-    B -->|gRPC| D(Grafana Tempo)
-    B -->|gRPC| E(Grafana Loki)
-    
-    C -->|Flushes Blocks| F[(Amazon S3)]
-    D -->|Flushes Blocks| F
-    E -->|Flushes Chunks| F
-```
-* **🟩 Pros**: Extremely low cost. 99.999999999% S3 durability.
-* **🟥 Cons**: Requires managing compactor workers and stateful sets.
+- App teams own instrumentation quality, service names, SLO intent, and dashboard values.
+- Platform teams own collector baselines, routing policy, backend integrations, sampling defaults, and paved-road templates.
+- Security/FinOps teams get centralized controls for secrets, retention, noisy telemetry, and tenant boundaries.
 
-### C: AWS Managed (AMP, X-Ray, OpenSearch)
+## Demo Positioning
 
-```mermaid
-flowchart LR
-    A[EKS Apps Cluster] -->|OTLP| B[EKS Observability Cluster\nOTel Gateway]
-    AWS[Other AWS Services] -->|CloudWatch Metric Streams| B
-    B -->|SigV4 Auth| C(Amazon Managed Prometheus\nAMP)
-    B -->|AWS SDK| D(AWS X-Ray)
-    B -->|SigV4 Auth| E(Amazon OpenSearch Serverless)
-    
-    C -.-> F[Amazon Managed Grafana]
-    D -.-> F
-    E -.-> F
-```
-* **🟩 Pros**: Zero TSDB operations. Highly available.
-* **🟥 Cons**: High volume OpenSearch is expensive. X-Ray search is limited.
+In the live demo, `k8s-manifests/` is the deployable slice. The other folders are the production templates I would standardize before onboarding hundreds of teams.

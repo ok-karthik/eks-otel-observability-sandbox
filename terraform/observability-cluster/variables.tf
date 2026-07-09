@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "cluster_name" {
   description = "Name of the EKS cluster"
   type        = string
-  default     = "apps-cluster-1"
+  default     = "observability-cluster"
 }
 
 variable "node_group_name" {

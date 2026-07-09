@@ -17,6 +17,7 @@ env:
   AWS_REGION: us-east-1
   GOLANG_APP_REPO: golang-product-service
   PYTHON_APP_REPO: python-product-info-service
+  APPS_SRC_DIR: apps-workload-cluster-1/apps-src
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
 jobs:
@@ -60,8 +61,8 @@ jobs:
       - name: Build and Push Go Checkout Service
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/golang-app
-          file: ./apps/golang-app/Dockerfile
+          context: ./${{ env.APPS_SRC_DIR }}/golang-app
+          file: ./${{ env.APPS_SRC_DIR }}/golang-app/Dockerfile
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.GOLANG_APP_REPO }}:${{ github.sha }}
@@ -75,8 +76,8 @@ jobs:
       - name: Build and Push Python Payment Service
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/python-app
-          file: ./apps/python-app/Dockerfile
+          context: ./${{ env.APPS_SRC_DIR }}/python-app
+          file: ./${{ env.APPS_SRC_DIR }}/python-app/Dockerfile
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.PYTHON_APP_REPO }}:${{ github.sha }}

@@ -10,7 +10,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-scheme: "internal" # Kept private inside the VPC
 
     # Enables topology aware routing in Kubernetes 1.27+
-    # See https://oneuptime.com/blog/post/2026-01-30-kubernetes-service-topology/view
+    # https://oneuptime.com/blog/post/2026-01-30-kubernetes-service-topology/view
     service.kubernetes.io/topology-mode: Auto
 spec:
   type: LoadBalancer

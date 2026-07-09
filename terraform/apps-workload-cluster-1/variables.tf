@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "cluster_name" {
   description = "Name of the EKS cluster"
   type        = string
-  default     = "otel-demo-cluster"
+  default     = "apps-workload-cluster-1"
 }
 
 variable "node_group_name" {

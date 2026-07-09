@@ -1,149 +1,86 @@
-# EKS & Local OpenTelemetry Observability Sandbox
+# OpenTelemetry Observability Platform Demo
 
-This repository is a production-ready reference implementation for running **OpenTelemetry (OTel)** on an **Amazon EKS cluster**, alongside a fully working **local sandbox** using Docker Compose.
+Reference implementation for a multi-cluster observability platform on Amazon EKS. The demo shows how application teams can send traces, metrics, and logs through OpenTelemetry Collectors into a dedicated observability cluster, while the platform team owns routing, sampling, dashboards, and cost controls.
 
-It demonstrates a multi-service distributed transaction:
-1. **Go Checkout Service** (`golang-app`): Serves as the entrypoint. When a request is triggered, it initializes a trace and makes an HTTP outbound call to the Payment service.
-2. **Python Payment Service** (`python-app`): Receives the HTTP call from the Go service, processes the payment, and returns a response.
-3. **Redis Cache** (`redis-cache`): Simulates Amazon ElastiCache. Performance metrics are scraped natively from Redis by the OTel Collector.
-4. Both services propagate W3C trace headers, showing a single trace waterfall crossing the language boundary from Go to Python.
+Built for a 10-minute interview demo:
 
----
+1. A Go service calls a Python service and propagates W3C trace context.
+2. A workload-cluster OTel Collector DaemonSet enriches telemetry with Kubernetes metadata.
+3. A dedicated observability-cluster OTel Gateway applies filtering, batching, and sampling.
+4. Grafana LGTM and Pyroscope receive the telemetry for dashboards, traces, logs, metrics, and profiles.
+5. `observability-platform/` contains the reusable templates you would scale across 1000+ services.
 
-## 🏗️ System Architecture (EKS Production Topology)
-
-For production EKS clusters, this reference architecture defines a **two-tier collector topology**:
+## Architecture
 
 ```mermaid
 graph TD
-    subgraph EKSNode["EKS Worker Node"]
-        GoPod["Go Checkout Pod"] -->|Localhost / OTLP| NodeAgent["OTel Collector (DaemonSet)"]
-        PyPod["Python Payment Pod"] -->|Localhost / OTLP| NodeAgent
+    subgraph Apps["apps-workload-cluster-1"]
+        Go["Go product service"] -->|HTTP call + trace context| Py["Python product info service"]
+        Go -->|OTLP| Agent["OTel Collector DaemonSet"]
+        Py -->|OTLP| Agent
     end
 
-    subgraph AWSServices["AWS Services"]
-        RedisPod["Redis Cache (ElastiCache Sim)"]
-        OtherServices["Other AWS Services<br/>(RDS, DynamoDB, etc.)"]
+    subgraph Obs["observability-cluster"]
+        Gateway["OTel Collector Gateway"]
+        LGTM["Grafana LGTM"]
+        Pyro["Pyroscope"]
     end
-    
-    NodeAgent -->|Forward OTLP| CollectorGateway["Collector Gateway (Autoscaled Deployment)"]
-    RedisPod -->|Scrape Metrics / Redis Protocol| CollectorGateway
-    CollectorGateway -->|Export Telemetry| Backends["Datadog / Dynatrace /<br/>Grafana LGTM & Pyroscope / other OTel-compliant backends"]
+
+    Agent -->|OTLP over private networking| Gateway
+    Gateway --> LGTM
+    Go --> Pyro
+    Py --> Pyro
 ```
 
-* **Local DaemonSet Agent**: Runs on every node to collect host metrics (`hostmetrics`) and enrich container spans with Kubernetes pod metadata (`k8sattributes`) locally.
-* **Autoscaled Collector Gateway**: Collects the metrics/traces from the local agents, runs memory limiting, applies tail-based sampling rules, scrapes native metrics from our Redis Cache service, and forwards all telemetry data to the appropriate storage backends.
+The demo uses the same pattern you would explain for large enterprises: lightweight collectors near workloads, centralized regional gateways for policy control, and backend-specific exporters behind the gateway.
 
-> **Note on Scale**: For deployments spanning thousands of microservices across multiple geographic regions, the two-tier topology has limitations. See [Architecture Decisions and Tradeoffs](./architecture-decisions-and-tradeoffs.md) for a detailed comparison of scaling patterns (from Sidecars to Kafka-buffered Gateways) and recommendations for global enterprise deployments.
+## Repository Layout
 
----
+```text
+apps-workload-cluster-1/
+  apps-src/                 # Go and Python demo services
+  k8s-manifests/            # Workload cluster apps, instrumentation, and node collector
 
-## 📁 Repository Layout
+observability-platform/
+  k8s-manifests/            # Observability cluster LGTM, Pyroscope, and gateway collector
+  golden-signals/           # Reusable service dashboard templates
+  telemetry-budgeting/      # Tail sampling and filtering examples
+  routing-and-multitenancy/ # Tenant/team-aware routing examples
+  dashboard-and-alert-generators/
 
-```
-├── .github/
-│   └── workflows/
-│       └── ci.yaml              # GitHub Actions CI build & push to ECR
-├── Makefile                     # Root makefile wrapping local & EKS operations
-├── README.md                    # This document
-├── architecture-decisions-and-tradeoffs.md # Scale architecture patterns and trade-offs
-├── terraform/                   # AWS EKS control plane & node group infrastructure
-│   ├── main.tf                  # Base resources
-│   ├── apps-cluster-1/          # Application EKS cluster resources
-│   └── otel-cluster/            # Observability EKS cluster resources
-├── k8s/                         # Kubernetes manifests
-│   ├── apps/                    # Shared base manifests for microservices
-│   ├── local/                   # Kustomize overrides for local development
-│   ├── apps-cluster-1/          # EKS-specific manifests for apps cluster
-│   └── otel-cluster/            # EKS-specific manifests for observability cluster
-└── local-env/                   # Local compose stack configs
-    ├── docker-compose.yaml
-    └── collector-config.yaml
+terraform/
+  apps-workload-cluster-1/  # Workload EKS cluster
+  observability-cluster/    # Dedicated observability EKS cluster
 ```
 
----
+## Demo Commands
 
-## 💻 Running the Local Sandbox
-
-The local sandbox runs our Go checkout service, Python payment service, a Redis cache container, a **Grafana Pyroscope** container (for continuous profiling), and the unified **`grafana/otel-lgtm`** container (which houses OTel Collector, Prometheus, Tempo, Loki, and Grafana).
-
-### 1. Start the Stack
-Spin up the local docker-compose stack:
 ```bash
-make local-up
+make k8s-create        # Provision EKS clusters and shared AWS infrastructure
+make k8s-context       # Configure kubeconfig contexts
+make k8s-deploy-all    # Deploy observability stack, collectors, and apps
+make k8s-dashboards    # Port-forward Grafana to http://localhost:3000
 ```
 
-### 2. Trigger Telemetry Traffic
-Trigger a mock checkout transaction on the Go app:
-```bash
-make local-test
-```
+## Enterprise Scale Talking Points
 
-### 3. Browse Telemetry in Grafana
-1. Open **[http://localhost:3000](http://localhost:3000)** (anonymous admin access is enabled).
-2. Go to **Explore** in the left sidebar and select **Tempo** as the datasource.
-3. Select **Search**, choose `golang-product-service` as the Service Name, and click **Run Query**.
-4. Click on any trace in the list. You will see a distributed trace waterfall showing:
-   - The Go service executing the checkout transaction.
-   - The child HTTP POST call crossing over to the `python-product-info-service` to authorize the charge.
-5. To view scraped Redis cache metrics, switch the datasource to **Prometheus** and query:
-   ```promql
-   redis_uptime_seconds_total
-   ```
-6. To view continuous profiling data, open **Explore** and select **Pyroscope** as the datasource. Select `golang-product-service` or `python-product-info-service` to view active CPU and memory profiling flame graphs. Trace spans also link directly to their corresponding execution profiles.
+For 1000+ services across US, EU, and Australia, deploy this pattern per region:
 
-### 4. Stop the Stack
-```bash
-make local-down
-```
+- Application clusters run lightweight DaemonSet collectors for local enrichment and buffering.
+- Dedicated regional observability clusters run gateway fleets on isolated node groups.
+- Tail sampling keeps 100% of errors and latency outliers while reducing healthy high-volume traces.
+- Routing processors can separate telemetry by tenant, team, environment, or backend.
+- Dashboard and alert templates let teams onboard through GitOps instead of platform tickets.
+- For very large bursts or backend outages, insert Kafka/MSK between ingestion and processing gateways.
 
----
+See [architecture-decisions-and-tradeoffs.md](./architecture-decisions-and-tradeoffs.md) for the scale tradeoffs.
 
-## ☸️ EKS Deployment Guide
+## CI/CD
 
-### 1. Update Kubeconfig Context
-Point your local `kubectl` context to the newly created EKS cluster:
-```bash
-make k8s-context CLUSTER_NAME=<cluster-name> AWS_REGION=<region>
-```
+GitHub Actions builds the Go and Python images from `apps-workload-cluster-1/apps-src/` and pushes them to ECR using OIDC federation. Kubernetes manifests consume the `latest` image tags for the demo path.
 
----
+## Repo Name
 
-### 2. Deploy OpenTelemetry Stack (using OpenTelemetry Operator)
+Recommended rename: `opentelemetry-observability-platform-demo`.
 
-This method automates lifecycle management and auto-injection of OTel SDK wrappers into your pods using the official operator.
-
-#### A. Install Operator Prerequisites
-Install Cert-Manager, the OpenTelemetry Operator, and the AWS Application Load Balancer Ingress Controller:
-```bash
-make k8s-infra CLUSTER_NAME=<cluster-name> AWS_REGION=<region>
-```
-
-#### B. Deploy Observability Infrastructure
-Deploy the operator-based auto-instrumentation rules, collector daemonset, and gateway collector:
-```bash
-make k8s-deploy
-```
-
----
-
-> [!IMPORTANT]
-> Make sure to update the image repositories in `k8s/apps/golang-product-service.yaml` and `k8s/apps/python-product-info-service.yaml` to point to your AWS ECR Registry.
-
----
-
-## 🤖 GitHub Actions CI Pipeline
-
-The CI pipeline at `.github/workflows/ci.yaml` automates the Docker image compilation and delivery to AWS:
-1. **Triggers**: Runs on pushes and pull requests to the `main` branch.
-2. **AWS Authentication**: Authenticates with AWS.
-3. **Build & Push**: Builds the Go and Python apps, tag them with the current git commit SHA and `latest`, and pushes them to your ECR registries.
-4. **Caching**: Utilizes Github Actions caches (`type=gha`) to ensure extremely fast build times.
-
-### Configuring Secrets in GitHub
-To allow the CI pipeline to run, configure the following secrets in your GitHub repository:
-- `AWS_ACCESS_KEY_ID`: AWS Access Key ID.
-- `AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key.
-
-> [!TIP]
-> For production environments, it is recommended to use **GitHub OIDC Role Federation** to authenticate dynamically without storing static Access Keys. Comments and instructions on how to toggle this are detailed directly in `.github/workflows/ci.yaml`.
+Alternative: `otel-observability-platform-on-eks` if you want the EKS focus to be obvious from the repo name.

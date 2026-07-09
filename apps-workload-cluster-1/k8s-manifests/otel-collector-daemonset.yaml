@@ -68,6 +68,7 @@ spec:
             - k8s.namespace.name
             - k8s.node.name
             - k8s.container.name
+            - k8s.deployment.name
         pod_association:
           - sources:
               - from: connection # associates trace by client socket IP address

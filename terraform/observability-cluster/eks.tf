@@ -86,5 +86,13 @@ module "eks" {
       type        = "ingress"
       cidr_blocks = ["10.0.0.0/16"]
     }
+    ingress_peering_nodeports = {
+      description = "Allow NodePort traffic from peered Apps VPC"
+      protocol    = "tcp"
+      from_port   = 30000
+      to_port     = 32767
+      type        = "ingress"
+      cidr_blocks = ["10.0.0.0/16"]
+    }
   }
 }

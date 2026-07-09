@@ -9,8 +9,8 @@ data "aws_region" "current" {}
 
 locals {
   env      = "dev"
-  project  = "otel-demo"
-  vpc_cidr = "10.1.0.0/16"
+  project  = "apps-workload-cluster-1"
+  vpc_cidr = "10.0.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
@@ -100,7 +100,7 @@ resource "aws_nat_gateway" "nat" {
 # ==============================================================================
 # Route Tables
 # ==============================================================================
-resource "aws_route_table" "public_rt_otel" {
+resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
   route {
@@ -113,7 +113,7 @@ resource "aws_route_table" "public_rt_otel" {
   }
 }
 
-resource "aws_route_table" "private_rt_otel" {
+resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
   route {
@@ -132,11 +132,11 @@ resource "aws_route_table" "private_rt_otel" {
 resource "aws_route_table_association" "public" {
   count          = length(local.azs)
   subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public_rt_otel.id
+  route_table_id = aws_route_table.public.id
 }
 
 resource "aws_route_table_association" "private" {
   count          = length(local.azs)
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private_rt_otel.id
+  route_table_id = aws_route_table.private.id
 }

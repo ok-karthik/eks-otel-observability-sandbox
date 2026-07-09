@@ -30,5 +30,5 @@ Telemetry budgeting is how the platform keeps observability useful without letti
 - Drop health checks and other noisy low-value spans.
 - Normalize or reject high-cardinality attributes before storage.
 
-### Interview Talking Point
-At 1000+ services, sampling should be a platform default, not an app-by-app decision. Teams can request exceptions for critical flows, but the gateway enforces shared cost and reliability policy.
+### Key Takeaways
+At enterprise scale, sampling should be a platform default, not an app-by-app decision. Teams can request exceptions for critical flows, but the gateway enforces shared cost and reliability policy.

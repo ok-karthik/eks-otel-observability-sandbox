@@ -41,8 +41,6 @@ many app clusters -> ingestion gateways -> Kafka/MSK buffer -> processing gatewa
 
 ## Platform Product Model
 
-The strongest mental model is:
-
 ```text
 Developers declare observability intent in Git.
 The platform renders standard instrumentation, dashboards, alerts, routing, and cost controls.

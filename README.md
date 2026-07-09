@@ -39,11 +39,11 @@ apps-workload-cluster-1/
   k8s-manifests/            # Workload cluster apps, instrumentation, and node collector
 
 observability-platform/
-  k8s-manifests/            # Observability cluster LGTM, Pyroscope, and gateway collector
-  golden-signals/           # Reusable service dashboard templates
-  telemetry-budgeting/      # Tail sampling and filtering examples
-  routing-and-multitenancy/ # Tenant/team-aware routing examples
-  dashboard-and-alert-generators/
+  01-app-onboarding/        # Centralized App Onboarding for OTel
+  02-gateway-configuration/ # Tenant/team-aware routing examples
+  03-dashboards-and-alerts/ # Reusable service dashboard templates
+  04-cluster-gitops-baseline
+  k8s-manifests 
 
 terraform/
   apps-workload-cluster-1/  # Workload EKS cluster

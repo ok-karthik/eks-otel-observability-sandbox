@@ -763,6 +763,13 @@ data:
             "x": 0,
             "y": 5
           },
+          "id": 14,
+          "title": "CPU",
+          "type": "row"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
             "uid": "${datasource}"
           },
           "fieldConfig": {

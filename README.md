@@ -12,22 +12,7 @@ Built for a short demo:
 
 ## Architecture
 
-```mermaid
-graph TD
-    subgraph Apps["apps-workload-cluster-1"]
-        Go["Go product service"] -->|HTTP call + trace context| Py["Python product info service"]
-        Go -->|OTLP| Agent["OTel Collector DaemonSet"]
-        Py -->|OTLP| Agent
-    end
-
-    subgraph Obs["observability-cluster"]
-        Gateway["OTel Collector Gateway"]
-        LGTM["Grafana LGTM"]
-    end
-
-    Agent -->|OTLP over private networking| Gateway
-    Gateway --> LGTM
-```
+![AWS Architecture Diagram](.github/assets/aws_architecture.png)
 
 The demo uses the same pattern you would explain for large enterprises: lightweight collectors near workloads, centralized regional gateways for policy control, and backend-specific exporters behind the gateway.
 
@@ -75,3 +60,18 @@ See [architecture-decisions-and-tradeoffs.md](./architecture-decisions-and-trade
 ## CI/CD
 
 GitHub Actions builds the Go and Python images from `apps-workload-cluster-1/apps-src/` and pushes them to ECR using OIDC federation.
+
+## Observability Dashboards & Tracing
+
+### Go Service Dashboard
+![Go Service Dashboard](.github/assets/golang-service-dashboard.png)
+
+### Python Service Dashboard
+![Python Service Dashboard](.github/assets/python-app-dashboard.png)
+
+### Distributed Tracing (Tempo)
+![Distributed Tracing](.github/assets/grafana-explore-trace.png)
+
+### Correlated Application Logs (Loki)
+![Correlated Logs](.github/assets/grafana-explore-logs.png)
+

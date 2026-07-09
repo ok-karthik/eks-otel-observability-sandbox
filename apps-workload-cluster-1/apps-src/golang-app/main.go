@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func main() {
@@ -42,7 +43,11 @@ func main() {
 }
 
 func handleProduct(w http.ResponseWriter, r *http.Request) {
-	log.Println("[Go App] Fetching product info...")
+	spanCtx := trace.SpanFromContext(r.Context()).SpanContext()
+	traceID := spanCtx.TraceID().String()
+	spanID := spanCtx.SpanID().String()
+
+	log.Printf("trace_id=%s span_id=%s [Go App] Fetching product info...", traceID, spanID)
 	time.Sleep(50 * time.Millisecond) // Simulate some work
 
 	// Call the Python Payment Service
@@ -52,9 +57,10 @@ func handleProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// We use otelhttp.Get to send a GET request with context propagation.
-	log.Printf("[Go App] Calling payment service: %s/product-info", pythonAppURL)
+	log.Printf("trace_id=%s span_id=%s [Go App] Calling payment service: %s/product-info", traceID, spanID, pythonAppURL)
 	resp, err := otelhttp.Get(r.Context(), pythonAppURL+"/product-info")
 	if err != nil {
+		log.Printf("trace_id=%s span_id=%s [Go App] Payment call failed: %v", traceID, spanID, err)
 		http.Error(w, fmt.Sprintf("Payment call failed: %v", err), http.StatusInternalServerError)
 		return
 	}

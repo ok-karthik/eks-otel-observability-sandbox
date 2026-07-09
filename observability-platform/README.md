@@ -12,7 +12,7 @@ This folder is the "how this scales to 1000+ services" part of the demo. Treat i
 
 ## Interview Talk Track
 
-For a large company running services across US, EU, and Australia, I would not send all telemetry to one global collector. I would deploy this platform per region:
+For a large global company, I would deploy this platform per region:
 
 1. Workload clusters run lightweight OTel Collector DaemonSets.
 2. DaemonSets enrich telemetry with Kubernetes metadata and forward to a private regional observability cluster.
@@ -39,6 +39,6 @@ many app clusters -> ingestion gateways -> Kafka/MSK buffer -> processing gatewa
 - Platform teams own collector baselines, routing policy, backend integrations, sampling defaults, and paved-road templates.
 - Security/FinOps teams get centralized controls for secrets, retention, noisy telemetry, and tenant boundaries.
 
-## Demo Positioning
+## Demo
 
 In the live demo, `k8s-manifests/` is the deployable slice. The other folders are the production templates I would standardize before onboarding hundreds of teams.

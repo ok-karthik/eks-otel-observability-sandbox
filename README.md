@@ -2,7 +2,7 @@
 
 Reference implementation for a multi-cluster observability platform on Amazon EKS. The demo shows how application teams can send traces, metrics, and logs through OpenTelemetry Collectors into a dedicated observability cluster, while the platform team owns routing, sampling, dashboards, and cost controls.
 
-Built for a 10-minute interview demo:
+Built for a short demo:
 
 1. A Go service calls a Python service and propagates W3C trace context.
 2. A workload-cluster OTel Collector DaemonSet enriches telemetry with Kubernetes metadata.
@@ -62,9 +62,9 @@ make k8s-deploy-all    # Deploy observability stack, collectors, and apps
 make k8s-dashboards    # Port-forward Grafana to http://localhost:3000
 ```
 
-## Enterprise Scale Talking Points
+## At Enterprise Scale
 
-For 1000+ services across US, EU, and Australia, deploy this pattern per region:
+Deploy this pattern per region:
 
 - Application clusters run lightweight DaemonSet collectors for local enrichment and buffering.
 - Dedicated regional observability clusters run gateway fleets on isolated node groups.
@@ -77,10 +77,4 @@ See [architecture-decisions-and-tradeoffs.md](./architecture-decisions-and-trade
 
 ## CI/CD
 
-GitHub Actions builds the Go and Python images from `apps-workload-cluster-1/apps-src/` and pushes them to ECR using OIDC federation. Kubernetes manifests consume the `latest` image tags for the demo path.
-
-## Repo Name
-
-Recommended rename: `opentelemetry-observability-platform-demo`.
-
-Alternative: `otel-observability-platform-on-eks` if you want the EKS focus to be obvious from the repo name.
+GitHub Actions builds the Go and Python images from `apps-workload-cluster-1/apps-src/` and pushes them to ECR using OIDC federation.

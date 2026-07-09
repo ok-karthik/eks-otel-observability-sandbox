@@ -73,6 +73,13 @@ spec:
           - sources:
               - from: connection # associates trace by client socket IP address
 
+      # https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/resourceprocessor/README.md
+      resource:
+        attributes:
+          - key: team
+            value: product
+            action: upsert
+
     exporters:
       # Forwards enriched traces up to the centralized Autoscaled Gateway tier
       otlp:

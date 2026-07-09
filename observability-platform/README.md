@@ -4,16 +4,11 @@ This folder is the "how this scales to 1000+ services" part of the demo. Treat i
 
 ## What Lives Here
 
+- [01-app-onboarding](./01-app-onboarding): developer onboarding contract, example app-team values files, and language-specific OTel Operator instrumentation templates.
+- [02-gateway-configuration](./02-gateway-configuration): central OTel Gateway policies, including collector routing patterns for multi-tenancy, and tail-sampling/filtering examples for telemetry budgeting.
+- [03-dashboards-and-alerts](./03-dashboards-and-alerts): reusable dashboards for baseline golden signals and Helm-driven dashboard and alert generation patterns.
+- [04-cluster-gitops-baseline](./04-cluster-gitops-baseline): GitOps patterns with Argo CD, and workload-cluster baseline templates like the stable regional gateway alias.
 - [k8s-manifests](./k8s-manifests): deployable observability-cluster manifests for LGTM, Pyroscope, Grafana ingress, and the OTel Gateway.
-- [service-onboarding-contract.md](./service-onboarding-contract.md): the app-team/platform-team contract for metadata, SLOs, routing, dashboards, and alerts.
-- [onboarding](./onboarding): example app-team values files for Go, Python, Java, Node.js, and .NET services.
-- [instrumentation-templates](./instrumentation-templates): language-specific OTel Operator templates plus the Go SDK pattern.
-- [gitops-app-of-apps](./gitops-app-of-apps): Argo CD examples showing how app repos consume platform-owned observability charts.
-- [workload-cluster-baseline](./workload-cluster-baseline): workload-cluster templates such as the stable regional gateway alias.
-- [golden-signals](./golden-signals): reusable dashboards for latency, traffic, errors, and saturation.
-- [telemetry-budgeting](./telemetry-budgeting): tail-sampling and filtering examples for cost and cardinality control.
-- [routing-and-multitenancy](./routing-and-multitenancy): collector routing patterns for teams, tenants, environments, and backend separation.
-- [dashboard-and-alert-generators](./dashboard-and-alert-generators): Helm-driven dashboard and alert generation patterns.
 
 ## Interview Talk Track
 

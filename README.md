@@ -73,5 +73,5 @@ GitHub Actions builds the Go and Python images from `apps-workload-cluster-1/app
 ![Distributed Tracing](.github/assets/grafana-explore-trace.png)
 
 ### Correlated Application Logs (Loki)
-![Correlated Logs](.github/assets/grafana-explore-logs.png)
+![Correlated Logs](.github/assets/grafana-explore-correlation.png)
 

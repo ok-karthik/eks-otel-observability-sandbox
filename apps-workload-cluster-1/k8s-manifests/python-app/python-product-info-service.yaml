@@ -18,8 +18,8 @@ spec:
         # ==================== OTel Auto-Instrumentation Injection ====================
         # This annotation tells the OpenTelemetry Operator to dynamically inject
         # the OTel SDK wrapper into this Python container during pod startup.
-        # It references the 'default-instrumentation' Instrumentation CRD we created.
-        instrumentation.opentelemetry.io/inject-python: "default-instrumentation"
+        # It references the 'python-instrumentation' Instrumentation CRD we created.
+        instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
     spec:
       containers:
         - name: python-app

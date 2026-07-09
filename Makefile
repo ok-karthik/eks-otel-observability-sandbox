@@ -70,15 +70,11 @@ k8s-deploy-apps:
 	kubectl --context $(APPS_CLUSTER) create namespace monitoring --dry-run=client -o yaml | kubectl --context $(APPS_CLUSTER) apply -f -
 	@echo "Applying OTel Agent & Instrumentation in $(APPS_CLUSTER)..."
 	kubectl --context $(APPS_CLUSTER) apply -f $(APPS_MANIFEST_DIR)/otel-collector-daemonset.yaml
-	kubectl --context $(APPS_CLUSTER) apply -f $(APPS_MANIFEST_DIR)/otel-instrumentation.yaml
-	@echo "Applying Common Applications in $(APPS_CLUSTER)..."
-	kubectl --context $(APPS_CLUSTER) apply -f $(APPS_MANIFEST_DIR)/golang-product-service.yaml
-	kubectl --context $(APPS_CLUSTER) apply -f $(APPS_MANIFEST_DIR)/python-product-info-service.yaml
-	@echo "Applying Ingress in $(APPS_CLUSTER)..."
-	kubectl --context $(APPS_CLUSTER) apply -f $(APPS_MANIFEST_DIR)/app-ingress.yaml
+	@echo "Applying Common Applications, Ingress in $(APPS_CLUSTER)..."
+	kubectl --context $(APPS_CLUSTER) apply -f $(APPS_MANIFEST_DIR)/
 
 k8s-undeploy-all:
-	kubectl --context $(APPS_CLUSTER) delete -f $(APPS_MANIFEST_DIR)/app-ingress.yaml --ignore-not-found=true
+	kubectl --context $(APPS_CLUSTER) delete -f $(APPS_MANIFEST_DIR)/golang-app/app-ingress.yaml --ignore-not-found=true
 	kubectl --context $(APPS_CLUSTER) delete -f $(APPS_MANIFEST_DIR)/ --ignore-not-found=true
 	kubectl --context $(OTEL_CLUSTER) delete -f $(OBS_MANIFEST_DIR)/ --ignore-not-found=true
 

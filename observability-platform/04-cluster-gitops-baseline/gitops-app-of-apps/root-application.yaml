@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-platform-apps
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: https://github.example.internal/platform/observability-platform.git
+    targetRevision: main
+    path: observability-platform/gitops-app-of-apps/apps
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

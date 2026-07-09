@@ -34,6 +34,7 @@ spec:
             - 'IsMatch(attributes["http.user_agent"], "ELB-HealthChecker.*")'
 
       # Memory Limiter protects the collector from crashing on trace spikes
+      # https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/memorylimiterprocessor/README.md
       memory_limiter:
         check_interval: 1s
         limit_percentage: 75
@@ -56,14 +57,14 @@ spec:
           - name: keep-latency-spikes
             type: latency
             latency: { threshold_ms: 2000 }
-          # Policy 4: Keep services, and discard the rest of services
-          - name: keep-checkout
-            type: string_attribute
-            string_attribute:
-              {
-                key: service.name,
-                values: ["php-checkout-service", "golang-product-service"],
-              }
+          ## Policy 4: Keep services, and discard the rest of services
+          #- name: keep-specific-services
+          #  type: string_attribute
+          #  string_attribute:
+          #    {
+          #      key: service.name,
+          #      values: ["python-product-info-service", "golang-product-service"],
+          #    }
 
       batch:
         send_batch_size: 8192
@@ -110,6 +111,7 @@ spec:
               filter/drop_noisy_asgi,
               filter/lb_health_checks,
               transform/standardize_http,
+              tail_sampling,
               batch,
             ]
           exporters: [otlp/lgtm]

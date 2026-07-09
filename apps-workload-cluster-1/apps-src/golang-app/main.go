@@ -46,7 +46,7 @@ func handleProduct(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(50 * time.Millisecond) // Simulate some work
 
 	// Call the Python Payment Service
-	pythonAppURL := os.Getenv("PAYMENT_SERVICE_URL")
+	pythonAppURL := os.Getenv("PRODUCT_INFO_SERVICE_URL")
 	if pythonAppURL == "" {
 		pythonAppURL = "http://python-app:8001"
 	}

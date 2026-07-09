@@ -7,7 +7,7 @@ Built for a short demo:
 1. A Go service calls a Python service and propagates W3C trace context.
 2. A workload-cluster OTel Collector DaemonSet enriches telemetry with Kubernetes metadata.
 3. A dedicated observability-cluster OTel Gateway applies filtering, batching, and sampling.
-4. Grafana LGTM and Pyroscope receive the telemetry for dashboards, traces, logs, metrics, and profiles.
+4. Grafana LGTM receives the telemetry for dashboards, traces, logs, and metrics.
 5. `observability-platform/` contains the reusable templates you would scale across 1000+ services.
 
 ## Architecture
@@ -23,13 +23,10 @@ graph TD
     subgraph Obs["observability-cluster"]
         Gateway["OTel Collector Gateway"]
         LGTM["Grafana LGTM"]
-        Pyro["Pyroscope"]
     end
 
     Agent -->|OTLP over private networking| Gateway
     Gateway --> LGTM
-    Go --> Pyro
-    Py --> Pyro
 ```
 
 The demo uses the same pattern you would explain for large enterprises: lightweight collectors near workloads, centralized regional gateways for policy control, and backend-specific exporters behind the gateway.

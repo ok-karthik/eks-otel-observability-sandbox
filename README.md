@@ -35,6 +35,13 @@ terraform/
   observability-cluster/    # Dedicated observability EKS cluster
 ```
 
+## Prerequisites
+
+* **AWS Credentials**: Configured AWS CLI (`aws configure`) with Admin/PowerUser permissions.
+* **Tools**: `kubectl` (v1.23+), `terraform` (v1.5.0+), and `python3` (for dynamic config rendering).
+* **CI/CD Dependency**: GitHub Actions pushes Go/Python images to ECR, which depends on the ECR repos being created first via Terraform.
+
+
 ## Demo Commands
 
 ```bash
@@ -57,9 +64,7 @@ Deploy this pattern per region:
 
 See [architecture-decisions-and-tradeoffs.md](./architecture-decisions-and-tradeoffs.md) for the scale tradeoffs.
 
-## CI/CD
 
-GitHub Actions builds the Go and Python images from `apps-workload-cluster-1/apps-src/` and pushes them to ECR using OIDC federation.
 
 ## Observability Dashboards & Tracing
 

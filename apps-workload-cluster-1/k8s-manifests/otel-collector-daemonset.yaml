@@ -5,7 +5,7 @@ metadata:
   namespace: monitoring
 spec:
   type: ExternalName
-  externalName: k8s-monitori-otelcoll-da58f4d952-3146f2b4e9f7c684.elb.us-east-1.amazonaws.com
+  externalName: <OTEL_GATEWAY_LB_HOST>
   ports:
     - name: otlp-grpc
       port: 4317

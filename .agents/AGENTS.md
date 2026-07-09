@@ -49,7 +49,7 @@ observability-platform/
     grafana-ingress.yaml
     grafana-dashboards-configmap.yaml
     otel-collector-gateway.yaml
-    otel-collector-gateway-lb.yaml
+    svc-nlb-otel-gateway.yaml
   routing-and-multitenancy/
     README.md
     otel-gateway-multitenant.yaml

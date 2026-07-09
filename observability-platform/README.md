@@ -5,6 +5,11 @@ This folder is the "how this scales to 1000+ services" part of the demo. Treat i
 ## What Lives Here
 
 - [k8s-manifests](./k8s-manifests): deployable observability-cluster manifests for LGTM, Pyroscope, Grafana ingress, and the OTel Gateway.
+- [service-onboarding-contract.md](./service-onboarding-contract.md): the app-team/platform-team contract for metadata, SLOs, routing, dashboards, and alerts.
+- [onboarding](./onboarding): example app-team values files for Go, Python, Java, Node.js, and .NET services.
+- [instrumentation-templates](./instrumentation-templates): language-specific OTel Operator templates plus the Go SDK pattern.
+- [gitops-app-of-apps](./gitops-app-of-apps): Argo CD examples showing how app repos consume platform-owned observability charts.
+- [workload-cluster-baseline](./workload-cluster-baseline): workload-cluster templates such as the stable regional gateway alias.
 - [golden-signals](./golden-signals): reusable dashboards for latency, traffic, errors, and saturation.
 - [telemetry-budgeting](./telemetry-budgeting): tail-sampling and filtering examples for cost and cardinality control.
 - [routing-and-multitenancy](./routing-and-multitenancy): collector routing patterns for teams, tenants, environments, and backend separation.
@@ -38,6 +43,23 @@ many app clusters -> ingestion gateways -> Kafka/MSK buffer -> processing gatewa
 - App teams own instrumentation quality, service names, SLO intent, and dashboard values.
 - Platform teams own collector baselines, routing policy, backend integrations, sampling defaults, and paved-road templates.
 - Security/FinOps teams get centralized controls for secrets, retention, noisy telemetry, and tenant boundaries.
+
+## Platform Product Model
+
+The strongest mental model is:
+
+```text
+Developers declare observability intent in Git.
+The platform renders standard instrumentation, dashboards, alerts, routing, and cost controls.
+```
+
+In practice:
+
+1. App teams add a small values file from `onboarding/`.
+2. The values file selects a language template from `instrumentation-templates/`.
+3. Argo CD or Flux applies platform-owned templates from `gitops-app-of-apps/`.
+4. Workload telemetry flows through the local DaemonSet collector.
+5. The central gateway applies platform policy: filtering, semantic normalization, tail sampling, routing, and backend export.
 
 ## Demo
 

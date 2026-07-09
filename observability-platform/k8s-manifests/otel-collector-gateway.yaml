@@ -111,6 +111,7 @@ spec:
               filter/drop_noisy_asgi,
               filter/lb_health_checks,
               transform/standardize_http,
+              tail_sampling,
               batch,
             ]
           exporters: [otlp/lgtm]

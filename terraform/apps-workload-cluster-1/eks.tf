@@ -46,6 +46,10 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = "1.35"
 
+  # Nodes are launched into private subnets and need NAT egress during bootstrap
+  # for nodeadm, EC2 API calls, EKS registration, image pulls, and add-ons.
+  depends_on = [aws_route_table_association.private]
+
   # 1. Network setup (passes subnets from your VPC resource)
   vpc_id     = aws_vpc.main.id
   subnet_ids = aws_subnet.private[*].id

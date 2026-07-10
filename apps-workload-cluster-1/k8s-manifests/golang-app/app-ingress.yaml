@@ -4,6 +4,7 @@ metadata:
   name: app-ingress
   namespace: default
   annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: "workload-1-app-alb"
     # ==================== AWS ALB Ingress Controller Annotations ====================
 
     # 1. Tells the AWS Load Balancer Controller to provision an Application Load Balancer

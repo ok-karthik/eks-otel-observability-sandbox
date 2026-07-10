@@ -4,6 +4,7 @@ metadata:
   name: grafana-ingress
   namespace: monitoring
   annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: "obs-cluster-grafana"
     # Tells the AWS Load Balancer Controller to provision an Application Load Balancer (ALB)
     kubernetes.io/ingress.class: alb
     
@@ -24,6 +25,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: lgtm
+                name: grafana
                 port:
-                  number: 3000
+                  number: 80

@@ -4,6 +4,7 @@ metadata:
   name: svc-nlb-otel-gateway
   namespace: monitoring
   annotations:
+    service.beta.kubernetes.io/aws-load-balancer-name: "obs-cluster-otel-gw"
     # Provisions a high-performance Network Load Balancer (NLB) in AWS
     service.beta.kubernetes.io/aws-load-balancer-type: "external"
     service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance" # Changed to instance to allow SNAT and resolve VPC peering asymmetric routing

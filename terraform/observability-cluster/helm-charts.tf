@@ -109,3 +109,103 @@ resource "aws_eks_pod_identity_association" "aws_lb_controller" {
   service_account = "aws-load-balancer-controller"
   role_arn        = aws_iam_role.aws_lb_controller.arn
 }
+
+# 5. Grafana Stack
+resource "helm_release" "loki" {
+  name             = "loki"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "loki"
+  namespace        = "monitoring"
+  create_namespace = true
+
+  set {
+    name  = "loki.auth_enabled"
+    value = "false"
+  }
+
+  # Config to use S3
+  set {
+    name  = "loki.storage.type"
+    value = "s3"
+  }
+  set {
+    name  = "loki.storage.s3.s3"
+    value = "s3://${var.aws_region}/${aws_s3_bucket.loki_data.bucket}"
+  }
+  
+  depends_on = [module.eks, aws_eks_pod_identity_association.loki]
+}
+
+resource "helm_release" "tempo" {
+  name             = "tempo"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "tempo-distributed"
+  namespace        = "monitoring"
+  create_namespace = true
+
+  set {
+    name  = "storage.trace.backend"
+    value = "s3"
+  }
+  set {
+    name  = "storage.trace.s3.bucket"
+    value = aws_s3_bucket.tempo_data.bucket
+  }
+
+  depends_on = [module.eks, aws_eks_pod_identity_association.tempo]
+}
+
+resource "helm_release" "mimir" {
+  name             = "mimir"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "mimir-distributed"
+  namespace        = "monitoring"
+  create_namespace = true
+
+  set {
+    name  = "mimir.structuredConfig.blocks_storage.backend"
+    value = "s3"
+  }
+  set {
+    name  = "mimir.structuredConfig.blocks_storage.s3.bucket_name"
+    value = aws_s3_bucket.mimir_blocks.bucket
+  }
+  set {
+    name  = "mimir.structuredConfig.alertmanager_storage.backend"
+    value = "s3"
+  }
+  set {
+    name  = "mimir.structuredConfig.alertmanager_storage.s3.bucket_name"
+    value = aws_s3_bucket.mimir_alertmanager.bucket
+  }
+  set {
+    name  = "mimir.structuredConfig.ruler_storage.backend"
+    value = "s3"
+  }
+  set {
+    name  = "mimir.structuredConfig.ruler_storage.s3.bucket_name"
+    value = aws_s3_bucket.mimir_ruler.bucket
+  }
+
+  depends_on = [module.eks, aws_eks_pod_identity_association.mimir]
+}
+
+resource "helm_release" "grafana" {
+  name             = "grafana"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "grafana"
+  namespace        = "monitoring"
+  create_namespace = true
+
+  set {
+    name  = "sidecar.dashboards.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "sidecar.dashboards.label"
+    value = "grafana_dashboard"
+  }
+  
+  depends_on = [module.eks]
+}

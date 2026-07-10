@@ -87,11 +87,21 @@ spec:
               - delete_key(attributes, "http.target")
 
     exporters:
-      # Pushes metrics, traces, and logs directly to the local LGTM container in the cluster
-      otlp/lgtm:
-        endpoint: "lgtm.monitoring.svc.cluster.local:4317"
+      # Pushes metrics to Mimir
+      otlp/mimir:
+        endpoint: "mimir-nginx.monitoring.svc.cluster.local:80"
         tls:
           insecure: true
+      
+      # Pushes traces to Tempo
+      otlp/tempo:
+        endpoint: "tempo-distributor.monitoring.svc.cluster.local:4317"
+        tls:
+          insecure: true
+          
+      # Pushes logs to Loki
+      loki:
+        endpoint: "http://loki-gateway.monitoring.svc.cluster.local:80/loki/api/v1/push"
 
     service:
       telemetry:
@@ -114,12 +124,12 @@ spec:
               tail_sampling,
               batch,
             ]
-          exporters: [otlp/lgtm]
+          exporters: [otlp/tempo]
         metrics:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [otlp/lgtm]
+          exporters: [otlp/mimir]
         logs:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [otlp/lgtm]
+          exporters: [loki]

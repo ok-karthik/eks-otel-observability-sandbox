@@ -6,7 +6,10 @@ metadata:
 spec:
   # Deployment mode enables replica scaling and HPA (Horizontal Pod Autoscaler)
   mode: deployment
-  replicas: 1
+  autoscaler:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 80
   image: otel/opentelemetry-collector-contrib:0.109.0
 
   config:
@@ -17,6 +20,12 @@ spec:
             endpoint: 0.0.0.0:4317
           http:
             endpoint: 0.0.0.0:4318
+      
+      # Internal receiver for load-balanced traces
+      otlp/internal:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4319
 
     processors:
       # Filter processor to discard noisy low-level HTTP transport spans
@@ -87,6 +96,19 @@ spec:
               - delete_key(attributes, "http.target")
 
     exporters:
+      # Trace affinity load balancer
+      loadbalancing:
+        routing_key: traceID
+        protocol:
+          otlp:
+            tls:
+              insecure: true
+        resolver:
+          k8s:
+            service: otel-collector-gateway-collector
+            ports:
+              - 4319
+
       # Pushes metrics to Mimir
       otlp/mimir:
         endpoint: "mimir-nginx.monitoring.svc.cluster.local:80"
@@ -113,8 +135,15 @@ spec:
                     host: 0.0.0.0
                     port: 8889
       pipelines:
-        traces:
+        # Pipeline 1: Receives traces from NLB and routes them by TraceID to ensure affinity
+        traces/routing:
           receivers: [otlp]
+          processors: [memory_limiter]
+          exporters: [loadbalancing]
+
+        # Pipeline 2: Receives trace-affinity routed spans and performs tail sampling
+        traces:
+          receivers: [otlp/internal]
           processors:
             [
               memory_limiter,

@@ -117,13 +117,18 @@ resource "helm_release" "loki" {
   chart            = "loki"
   namespace        = "monitoring"
   create_namespace = true
+  timeout          = 900
+
+  set {
+    name  = "loki.useTestSchema"
+    value = "true"
+  }
 
   set {
     name  = "loki.auth_enabled"
     value = "false"
   }
 
-  # Config to use S3
   set {
     name  = "loki.storage.type"
     value = "s3"
@@ -131,6 +136,18 @@ resource "helm_release" "loki" {
   set {
     name  = "loki.storage.s3.s3"
     value = "s3://${var.aws_region}/${aws_s3_bucket.loki_data.bucket}"
+  }
+  set {
+    name  = "loki.storage.bucketNames.chunks"
+    value = aws_s3_bucket.loki_data.bucket
+  }
+  set {
+    name  = "loki.storage.bucketNames.ruler"
+    value = aws_s3_bucket.loki_data.bucket
+  }
+  set {
+    name  = "loki.storage.bucketNames.admin"
+    value = aws_s3_bucket.loki_data.bucket
   }
   
   depends_on = [module.eks, aws_eks_pod_identity_association.loki]
@@ -142,6 +159,7 @@ resource "helm_release" "tempo" {
   chart            = "tempo-distributed"
   namespace        = "monitoring"
   create_namespace = true
+  timeout          = 900
 
   set {
     name  = "storage.trace.backend"
@@ -161,6 +179,7 @@ resource "helm_release" "mimir" {
   chart            = "mimir-distributed"
   namespace        = "monitoring"
   create_namespace = true
+  timeout          = 900
 
   set {
     name  = "mimir.structuredConfig.blocks_storage.backend"

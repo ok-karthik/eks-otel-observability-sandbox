@@ -21,7 +21,8 @@ graph_attr = {
     "nodesep": "1.0",
     "ranksep": "2.0",
     "splines": "spline",
-    "fontsize": "24"
+    "fontsize": "24",
+    "dpi": "300"
 }
 
 node_attr = {

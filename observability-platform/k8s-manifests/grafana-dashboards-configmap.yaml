@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: lgtm-dashboards-provider
   namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
 data:
   dashboards.yaml: |
     apiVersion: 1
@@ -21,6 +23,8 @@ kind: ConfigMap
 metadata:
   name: lgtm-dashboards
   namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
 data:
   go-service-dashboard.json: |
     {

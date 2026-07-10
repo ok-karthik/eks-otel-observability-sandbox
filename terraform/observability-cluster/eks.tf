@@ -60,11 +60,14 @@ module "eks" {
   # 3. Configure the Managed Node Group (Spot Instances)
   eks_managed_node_groups = {
     general = {
-      min_size       = 1
-      max_size       = 4
-      desired_size   = 1
-      instance_types = ["t3.medium"]
+      min_size       = 2
+      max_size       = 5
+      desired_size   = 3
+      instance_types = ["t3.xlarge"]
       capacity_type  = "SPOT"
+      iam_role_additional_policies = {
+        ebs = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+      }
     }
   }
 
@@ -72,9 +75,10 @@ module "eks" {
   create_kms_key            = false
   cluster_encryption_config = {}
 
-  # 4. Install EKS Add-ons (Pod Identity Agent) natively
+  # 4. Install EKS Add-ons (Pod Identity Agent and EBS CSI) natively
   cluster_addons = {
     eks-pod-identity-agent = {}
+    aws-ebs-csi-driver     = {}
   }
 
   # 5. Enable access entries (Modern EKS auth)

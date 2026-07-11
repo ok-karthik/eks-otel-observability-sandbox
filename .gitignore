@@ -19,5 +19,6 @@ terraform.tfstate**
 *secret.yaml
 *secrets.yaml
 
+**/karpenter-*.tgz
 
 .DS_Store

@@ -29,9 +29,10 @@ module "apps_workload_cluster_1" {
 # 2. Instantiate Monitoring (OTel/LGTM) EKS Cluster Module
 # ==============================================================================
 module "observability_cluster" {
-  source       = "./observability-cluster"
-  aws_region   = "us-east-1"
-  cluster_name = "observability-cluster"
+  source                     = "./observability-cluster"
+  aws_region                 = "us-east-1"
+  cluster_name               = "observability-cluster"
+  deploy_observability_stack = var.deploy_observability_stack
 }
 
 # ==============================================================================

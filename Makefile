@@ -31,10 +31,13 @@ help: ## Show this help message
 # AWS EKS Infrastructure
 # ==============================================================================
 k8s-create:
-	cd terraform && terraform init && terraform apply
+	@echo "Deploying Infrastructure (Stage 1)..."
+	cd terraform && terraform init && terraform apply -var="deploy_observability_stack=false" -auto-approve
+	@echo "Deploying Observability Helm Charts (Stage 2)..."
+	cd terraform && terraform apply -var="deploy_observability_stack=true" -auto-approve
 
 k8s-destroy:
-	cd terraform && terraform destroy
+	cd terraform && terraform destroy -auto-approve
 
 k8s-context:
 	aws eks update-kubeconfig --region $(AWS_REGION) --name $(APPS_CLUSTER) --alias $(APPS_CLUSTER)
@@ -54,7 +57,6 @@ k8s-deploy-otel:
 	kubectl --context $(OTEL_CLUSTER) create namespace monitoring --dry-run=client -o yaml | kubectl --context $(OTEL_CLUSTER) apply -f -
 	@echo "Applying LGTM stack in $(OTEL_CLUSTER)..."
 	kubectl --context $(OTEL_CLUSTER) apply -f $(OBS_MANIFEST_DIR)/grafana-dashboards-configmap.yaml
-	kubectl --context $(OTEL_CLUSTER) apply -f $(OBS_MANIFEST_DIR)/grafana-lgtm.yaml
 	@echo "Applying Ingress for Grafana in $(OTEL_CLUSTER)..."
 	kubectl --context $(OTEL_CLUSTER) apply -f $(OBS_MANIFEST_DIR)/grafana-ingress.yaml
 	@echo "Applying Gateway in $(OTEL_CLUSTER)..."
@@ -78,7 +80,7 @@ k8s-deploy-apps:
 	echo "Using AWS Account ID: $(ACCOUNT_ID)"; \
 	echo "Waiting for OTel Gateway LoadBalancer hostname to be assigned..."; \
 	for i in {1..30}; do \
-		host=$$(kubectl --context $(OTEL_CLUSTER) get svc otel-collector-gateway-lb -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null); \
+		host=$$(kubectl --context $(OTEL_CLUSTER) get svc svc-nlb-otel-gateway -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null); \
 		if [ -n "$$host" ]; then \
 			echo "Found OTel Gateway LoadBalancer Host: $$host"; \
 			OTEL_GATEWAY_LB_HOST=$$host; \
@@ -93,15 +95,11 @@ k8s-deploy-apps:
 	fi; \
 	mkdir -p .tmp-manifests; \
 	cp -R $(APPS_MANIFEST_DIR)/* .tmp-manifests/; \
-	python3 -c "import os; \
-for root, dirs, files in os.walk('.tmp-manifests'): \
-    for file in files: \
-        if file.endswith('.yaml') or file.endswith('.yml'): \
-            path = os.path.join(root, file); \
-            with open(path, 'r') as f: content = f.read(); \
-            content = content.replace('<AWS_ACCOUNT_ID>', '$(ACCOUNT_ID)'); \
-            content = content.replace('<OTEL_GATEWAY_LB_HOST>', '$$OTEL_GATEWAY_LB_HOST'); \
-            with open(path, 'w') as f: f.write(content)"; \
+	find .tmp-manifests -type f \( -name "*.yaml" -o -name "*.yml" \) | while read -r file; do \
+		sed "s|<AWS_ACCOUNT_ID>|$(ACCOUNT_ID)|g" "$$file" > "$$file.tmp"; \
+		sed "s|<OTEL_GATEWAY_LB_HOST>|$$OTEL_GATEWAY_LB_HOST|g" "$$file.tmp" > "$$file"; \
+		rm -f "$$file.tmp"; \
+	done; \
 	echo "Applying rendered OTel Agent, Apps & Ingress in $(APPS_CLUSTER)..."; \
 	kubectl --context $(APPS_CLUSTER) apply -R -f .tmp-manifests/; \
 	rm -rf .tmp-manifests

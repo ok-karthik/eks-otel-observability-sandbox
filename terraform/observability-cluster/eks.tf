@@ -60,10 +60,10 @@ module "eks" {
   # 3. Configure the Managed Node Group (Spot Instances)
   eks_managed_node_groups = {
     general = {
-      min_size       = 2
-      max_size       = 5
-      desired_size   = 3
-      instance_types = ["t3.xlarge"]
+      min_size       = 1
+      max_size       = 4
+      desired_size   = 2
+      instance_types = ["t3.medium"]
       capacity_type  = "SPOT"
       iam_role_additional_policies = {
         ebs = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
@@ -74,6 +74,10 @@ module "eks" {
   # Disable KMS encryption to bypass service-linked role permission bottlenecks
   create_kms_key            = false
   cluster_encryption_config = {}
+
+  node_security_group_tags = {
+    "karpenter.sh/discovery" = var.cluster_name
+  }
 
   # 4. Install EKS Add-ons (Pod Identity Agent and EBS CSI) natively
   cluster_addons = {
@@ -102,5 +106,29 @@ module "eks" {
       type        = "ingress"
       cidr_blocks = ["10.0.0.0/16"]
     }
+  }
+}
+
+# ==============================================================================
+# Karpenter IAM & SQS Configuration
+# ==============================================================================
+module "karpenter" {
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version = "~> 20.0"
+
+  cluster_name = module.eks.cluster_name
+
+  # Enable Pod Identity for Karpenter controller
+  enable_pod_identity             = true
+  create_pod_identity_association = true
+
+  # Attach additional policies to the nodes Karpenter creates
+  node_iam_role_additional_policies = {
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    AmazonEBSCSIDriverPolicy     = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  }
+
+  tags = {
+    Environment = "observability"
   }
 }

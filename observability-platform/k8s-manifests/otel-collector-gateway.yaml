@@ -94,6 +94,13 @@ spec:
               # 3. Map http.target to url.path
               - set(attributes["url.path"], attributes["http.target"]) where attributes["http.target"] != nil
               - delete_key(attributes, "http.target")
+      
+      transform/loki_format:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(attributes["loki.format"], "raw")
 
     exporters:
       # Trace affinity load balancer
@@ -109,11 +116,13 @@ spec:
             ports:
               - 4319
 
-      # Pushes metrics to Mimir
-      otlp/mimir:
-        endpoint: "mimir-nginx.monitoring.svc.cluster.local:80"
-        tls:
-          insecure: true
+      # Pushes metrics to Mimir via Prometheus Remote Write
+      prometheusremotewrite:
+        endpoint: "http://mimir-distributor.monitoring.svc.cluster.local:8080/api/v1/push"
+        headers:
+          X-Scope-OrgID: "anonymous"
+        resource_to_telemetry_conversion:
+          enabled: true
       
       # Pushes traces to Tempo
       otlp/tempo:
@@ -124,6 +133,7 @@ spec:
       # Pushes logs to Loki
       loki:
         endpoint: "http://loki-gateway.monitoring.svc.cluster.local:80/loki/api/v1/push"
+        format: raw
 
     service:
       telemetry:
@@ -157,8 +167,30 @@ spec:
         metrics:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [otlp/mimir]
+          exporters: [prometheusremotewrite]
         logs:
           receivers: [otlp]
-          processors: [memory_limiter, batch]
+          processors: [memory_limiter, transform/loki_format, batch]
           exporters: [loki]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector-gateway-endpoints-reader
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints", "services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-gateway-endpoints-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector-gateway-endpoints-reader
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector-gateway-collector
+    namespace: monitoring

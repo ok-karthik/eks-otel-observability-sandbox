@@ -45,3 +45,21 @@ variable "node_group_type" {
   type        = string
   default     = "on-demand"
 }
+
+variable "karpenter_cpu_limit" {
+  description = "Max CPU limit for Karpenter node provisioning"
+  type        = number
+  default     = 100
+}
+
+variable "karpenter_memory_limit" {
+  description = "Max memory limit for Karpenter node provisioning (e.g. 1000Gi)"
+  type        = string
+  default     = "400Gi"
+}
+
+variable "deploy_observability_stack" {
+  description = "Whether to deploy the observability Helm charts (Loki, Tempo, Mimir, Grafana)"
+  type        = bool
+  default     = false
+}

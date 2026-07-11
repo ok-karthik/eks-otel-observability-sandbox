@@ -112,12 +112,14 @@ resource "aws_eks_pod_identity_association" "aws_lb_controller" {
 
 # 5. Grafana Stack
 resource "helm_release" "loki" {
+  count            = var.deploy_observability_stack ? 1 : 0
   name             = "loki"
   repository       = "https://grafana.github.io/helm-charts"
   chart            = "loki"
   namespace        = "monitoring"
   create_namespace = true
   timeout          = 900
+  wait             = false
 
   set {
     name  = "loki.useTestSchema"
@@ -154,12 +156,14 @@ resource "helm_release" "loki" {
 }
 
 resource "helm_release" "tempo" {
+  count            = var.deploy_observability_stack ? 1 : 0
   name             = "tempo"
   repository       = "https://grafana.github.io/helm-charts"
   chart            = "tempo-distributed"
   namespace        = "monitoring"
   create_namespace = true
   timeout          = 900
+  wait             = false
 
   set {
     name  = "storage.trace.backend"
@@ -169,17 +173,28 @@ resource "helm_release" "tempo" {
     name  = "storage.trace.s3.bucket"
     value = aws_s3_bucket.tempo_data.bucket
   }
+  set {
+    name  = "storage.trace.s3.endpoint"
+    value = "s3.${var.aws_region}.amazonaws.com"
+  }
+
+  set {
+    name  = "traces.otlp.grpc.enabled"
+    value = "true"
+  }
 
   depends_on = [module.eks, aws_eks_pod_identity_association.tempo]
 }
 
 resource "helm_release" "mimir" {
+  count            = var.deploy_observability_stack ? 1 : 0
   name             = "mimir"
   repository       = "https://grafana.github.io/helm-charts"
   chart            = "mimir-distributed"
   namespace        = "monitoring"
   create_namespace = true
   timeout          = 900
+  wait             = false
 
   set {
     name  = "mimir.structuredConfig.blocks_storage.backend"
@@ -190,12 +205,24 @@ resource "helm_release" "mimir" {
     value = aws_s3_bucket.mimir_blocks.bucket
   }
   set {
+    name  = "mimir.structuredConfig.blocks_storage.s3.endpoint"
+    value = "s3.${var.aws_region}.amazonaws.com"
+  }
+  set {
+    name  = "minio.enabled"
+    value = "false"
+  }
+  set {
     name  = "mimir.structuredConfig.alertmanager_storage.backend"
     value = "s3"
   }
   set {
     name  = "mimir.structuredConfig.alertmanager_storage.s3.bucket_name"
     value = aws_s3_bucket.mimir_alertmanager.bucket
+  }
+  set {
+    name  = "mimir.structuredConfig.alertmanager_storage.s3.endpoint"
+    value = "s3.${var.aws_region}.amazonaws.com"
   }
   set {
     name  = "mimir.structuredConfig.ruler_storage.backend"
@@ -205,11 +232,16 @@ resource "helm_release" "mimir" {
     name  = "mimir.structuredConfig.ruler_storage.s3.bucket_name"
     value = aws_s3_bucket.mimir_ruler.bucket
   }
+  set {
+    name  = "mimir.structuredConfig.ruler_storage.s3.endpoint"
+    value = "s3.${var.aws_region}.amazonaws.com"
+  }
 
   depends_on = [module.eks, aws_eks_pod_identity_association.mimir]
 }
 
 resource "helm_release" "grafana" {
+  count            = var.deploy_observability_stack ? 1 : 0
   name             = "grafana"
   repository       = "https://grafana.github.io/helm-charts"
   chart            = "grafana"
@@ -225,6 +257,113 @@ resource "helm_release" "grafana" {
     name  = "sidecar.dashboards.label"
     value = "grafana_dashboard"
   }
+
+  values = [
+    yamlencode({
+      datasources = {
+        "datasources.yaml" = {
+          apiVersion = 1
+          datasources = [
+            {
+              name      = "Mimir (Prometheus)"
+              type      = "prometheus"
+              access    = "proxy"
+              url       = "http://mimir-gateway.monitoring.svc.cluster.local/prometheus"
+              uid       = "prometheus"
+              isDefault = true
+            },
+            {
+              name   = "Loki"
+              type   = "loki"
+              access = "proxy"
+              url    = "http://loki-gateway.monitoring.svc.cluster.local"
+              uid    = "loki"
+            },
+            {
+              name   = "Tempo"
+              type   = "tempo"
+              access = "proxy"
+              url    = "http://tempo-query-frontend.monitoring.svc.cluster.local:3200"
+              uid    = "tempo"
+              jsonData = {
+                tracesToLogsV2 = {
+                  datasourceUid      = "loki"
+                  spanStartTimeShift = "-1m"
+                  spanEndTimeShift   = "1m"
+                  filterByTraceID    = true
+                  filterBySpanID     = false
+                  customQuery        = true
+                  query              = "{$${__tags}} |= \"$${__trace.traceId}\""
+                  tags = [
+                    {
+                      key   = "service.name"
+                      value = "service_name"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    })
+  ]
   
   depends_on = [module.eks]
+}
+
+# ==============================================================================
+# Karpenter
+# ==============================================================================
+resource "helm_release" "karpenter" {
+  name             = "karpenter"
+  repository       = "oci://public.ecr.aws/karpenter"
+  chart            = "karpenter"
+  namespace        = "kube-system"
+  create_namespace = true
+  version          = "v0.34.0"
+
+  set {
+    name  = "settings.clusterName"
+    value = module.eks.cluster_name
+  }
+  set {
+    name  = "settings.interruptionQueue"
+    value = module.karpenter.queue_name
+  }
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+  set {
+    name  = "serviceAccount.name"
+    value = module.karpenter.service_account
+  }
+
+  depends_on = [module.eks, module.karpenter]
+}
+
+resource "helm_release" "karpenter_provisioner" {
+  name      = "karpenter-provisioner"
+  chart     = "${path.module}/karpenter-provisioner"
+  namespace = "kube-system"
+
+  set {
+    name  = "karpenterRoleName"
+    value = module.karpenter.node_iam_role_name
+  }
+  set {
+    name  = "clusterName"
+    value = module.eks.cluster_name
+  }
+  set {
+    name  = "cpuLimit"
+    value = var.karpenter_cpu_limit
+  }
+  set {
+    name  = "memoryLimit"
+    value = var.karpenter_memory_limit
+  }
+
+  depends_on = [helm_release.karpenter]
 }

@@ -256,7 +256,7 @@ data:
                 "type": "loki",
                 "uid": "loki"
               },
-              "expr": "{service_name=\"$service\"}",
+              "expr": "{service_name=\"$service\"} | json | line_format \"{{.body}}\"",
               "refId": "A"
             }
           ],
@@ -521,7 +521,7 @@ data:
                 "type": "loki",
                 "uid": "loki"
               },
-              "expr": "{service_name=\"$service\"}",
+              "expr": "{service_name=\"$service\"} | json | line_format \"{{.body}}\"",
               "refId": "A"
             }
           ],

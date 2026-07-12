@@ -17,15 +17,16 @@ variable "node_group_name" {
 }
 
 variable "node_group_instance_types" {
-  description = "EC2 instance types for the worker nodes"
+  description = "EC2 instance types for the fixed managed node group. Karpenter handles burst beyond this baseline."
   type        = list(string)
   default     = ["t3.medium"]
 }
 
+
 variable "node_group_desired_capacity" {
-  description = "Initial number of nodes in the node group"
+  description = "Initial number of nodes in the node group (2 required to schedule all observability components)"
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "node_group_min_size" {
@@ -37,7 +38,7 @@ variable "node_group_min_size" {
 variable "node_group_max_size" {
   description = "Maximum number of nodes for autoscaling"
   type        = number
-  default     = 4
+  default     = 6
 }
 
 variable "node_group_type" {
@@ -53,9 +54,9 @@ variable "karpenter_cpu_limit" {
 }
 
 variable "karpenter_memory_limit" {
-  description = "Max memory limit for Karpenter node provisioning (e.g. 1000Gi)"
+  description = "Max memory limit for Karpenter node provisioning (e.g. 200Gi)"
   type        = string
-  default     = "400Gi"
+  default     = "200Gi"
 }
 
 variable "deploy_observability_stack" {

@@ -1,4 +1,4 @@
-apiVersion: karpenter.sh/v1beta1
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: default
@@ -16,7 +16,7 @@ spec:
           operator: Gt
           values: ["2"]
       nodeClassRef:
-        apiVersion: karpenter.k8s.aws/v1beta1
+        group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: default
   limits:
@@ -24,4 +24,5 @@ spec:
     memory: "{{ .Values.memoryLimit }}"
   disruption:
     consolidationPolicy: WhenUnderutilized
+    consolidateAfter: 30s
     expireAfter: 720h

@@ -25,10 +25,14 @@ resource "aws_s3_bucket" "mimir_alertmanager" {
 }
 
 # 2. IAM Policy for S3 Access
+#    GetBucketLocation is required by Loki single-binary on startup to resolve
+#    the AWS region from the bucket name. Without it the pod gets a 403 and
+#    enters CrashLoopBackOff.
 data "aws_iam_policy_document" "grafana_stack_s3_access" {
   statement {
     actions = [
       "s3:ListBucket",
+      "s3:GetBucketLocation",
       "s3:PutObject",
       "s3:GetObject",
       "s3:DeleteObject"
@@ -77,8 +81,12 @@ resource "aws_iam_role_policy_attachment" "grafana_stack_s3_attach" {
   policy_arn = aws_iam_policy.grafana_stack_s3.arn
 }
 
-# 4. EKS Pod Identity Associations for the Service Accounts
-# Loki
+# 4. EKS Pod Identity Associations for each distributed chart's Service Account.
+#    loki, tempo-distributed, and mimir-distributed each create their own SA.
+#    All three are bound to the same shared grafana_stack IAM role which has
+#    access to all five S3 buckets.
+
+# Loki (SA name: "loki", created by the loki Helm chart)
 resource "aws_eks_pod_identity_association" "loki" {
   cluster_name    = module.eks.cluster_name
   namespace       = "monitoring"
@@ -86,7 +94,7 @@ resource "aws_eks_pod_identity_association" "loki" {
   role_arn        = aws_iam_role.grafana_stack.arn
 }
 
-# Tempo
+# Tempo (SA name: "tempo", created by the tempo-distributed Helm chart)
 resource "aws_eks_pod_identity_association" "tempo" {
   cluster_name    = module.eks.cluster_name
   namespace       = "monitoring"
@@ -94,10 +102,11 @@ resource "aws_eks_pod_identity_association" "tempo" {
   role_arn        = aws_iam_role.grafana_stack.arn
 }
 
-# Mimir
+# Mimir (SA name: "mimir", created by the mimir-distributed Helm chart)
 resource "aws_eks_pod_identity_association" "mimir" {
   cluster_name    = module.eks.cluster_name
   namespace       = "monitoring"
   service_account = "mimir"
   role_arn        = aws_iam_role.grafana_stack.arn
 }
+

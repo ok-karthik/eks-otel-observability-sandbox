@@ -10,14 +10,16 @@ APPS_MANIFEST_DIR = apps-workload-cluster-1/k8s-manifests
 OBS_MANIFEST_DIR = observability-platform/k8s-manifests
 AWS_ACCOUNT_ID ?= $(shell aws sts get-caller-identity --query Account --output text 2>/dev/null)
 
-.PHONY: help k8s-create k8s-destroy k8s-context k8s-deploy-all k8s-deploy-otel k8s-deploy-apps k8s-undeploy-all k8s-dashboards
+.PHONY: help k8s-create k8s-create-infra k8s-create-helm k8s-destroy k8s-context k8s-deploy-all k8s-deploy-otel k8s-deploy-apps k8s-undeploy-all k8s-dashboards
 
 help: ## Show this help message
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "AWS EKS Infrastructure (Terraform):"
-	@echo "  k8s-create           Create both EKS clusters and ECR repos via parent Terraform"
-	@echo "  k8s-destroy          Destroy all AWS resources via parent Terraform"
+	@echo "  k8s-create           Create EKS clusters + deploy Helm charts (two-stage, recommended)"
+	@echo "  k8s-create-infra     Stage 1 only — EKS, VPC, IAM, S3 (no Helm). Safe to re-run."
+	@echo "  k8s-create-helm      Stage 2 only — Helm charts only. Assumes EKS is already up."
+	@echo "  k8s-destroy          Destroy all AWS resources via Terraform"
 	@echo "  k8s-context          Update kubeconfig context for both EKS clusters"
 	@echo ""
 	@echo "Deploying Observability (Multi-Cluster):"
@@ -27,17 +29,82 @@ help: ## Show this help message
 	@echo "  k8s-undeploy-all     Remove manifests from both clusters"
 	@echo "  k8s-dashboards       Port-forward dashboards from the observability cluster"
 
+
 # ==============================================================================
 # AWS EKS Infrastructure
 # ==============================================================================
-k8s-create:
-	@echo "Deploying Infrastructure (Stage 1)..."
-	cd terraform && terraform init && terraform apply -var="deploy_observability_stack=false" -auto-approve
-	@echo "Deploying Observability Helm Charts (Stage 2)..."
-	cd terraform && terraform apply -var="deploy_observability_stack=true" -auto-approve
+#
+# Stage 1 targets only concrete infra resources (VPC, EKS, IAM, S3).
+# No helm_release resources are touched until Stage 2, avoiding the
+# "Helm provider talks to a not-yet-healthy API server" race condition.
+#
+# Infra resource targets for BOTH clusters:
+INFRA_TARGETS := \
+  -target='module.apps_workload_cluster_1' \
+  -target='module.observability_cluster.module.eks' \
+  -target='module.observability_cluster.module.karpenter' \
+  -target='module.observability_cluster.aws_vpc.main' \
+  -target='module.observability_cluster.aws_subnet.public' \
+  -target='module.observability_cluster.aws_subnet.private' \
+  -target='module.observability_cluster.aws_internet_gateway.gw' \
+  -target='module.observability_cluster.aws_eip.nat' \
+  -target='module.observability_cluster.aws_nat_gateway.nat' \
+  -target='module.observability_cluster.aws_route_table.public_rt_otel' \
+  -target='module.observability_cluster.aws_route_table.private_rt_otel' \
+  -target='module.observability_cluster.aws_route_table_association.public' \
+  -target='module.observability_cluster.aws_route_table_association.private' \
+  -target='module.observability_cluster.aws_route.private_nat_otel' \
+  -target='module.observability_cluster.aws_s3_bucket.loki_data' \
+  -target='module.observability_cluster.aws_s3_bucket.tempo_data' \
+  -target='module.observability_cluster.aws_s3_bucket.mimir_blocks' \
+  -target='module.observability_cluster.aws_s3_bucket.mimir_ruler' \
+  -target='module.observability_cluster.aws_s3_bucket.mimir_alertmanager' \
+  -target='module.observability_cluster.aws_iam_policy.grafana_stack_s3' \
+  -target='module.observability_cluster.aws_iam_role.grafana_stack' \
+  -target='module.observability_cluster.aws_iam_role_policy_attachment.grafana_stack_s3_attach' \
+  -target='module.observability_cluster.aws_eks_pod_identity_association.lgtm' \
+  -target='module.observability_cluster.aws_iam_policy.aws_lb_controller' \
+  -target='module.observability_cluster.aws_iam_role.aws_lb_controller' \
+  -target='module.observability_cluster.aws_iam_role_policy_attachment.aws_lb_controller' \
+  -target='module.observability_cluster.aws_eks_pod_identity_association.aws_lb_controller' \
+  -target='aws_vpc_peering_connection.peering' \
+  -target='aws_route.apps_to_otel' \
+  -target='aws_route.otel_to_apps'
 
-k8s-destroy:
-	cd terraform && terraform destroy -auto-approve
+k8s-create: ## Create both EKS clusters and deploy all Helm charts (two-stage)
+	@echo "=== Stage 1: Provisioning EKS clusters, VPC, IAM, S3 (no Helm) ==="
+	cd terraform && terraform init -upgrade && \
+	  terraform apply $(INFRA_TARGETS) \
+	    -parallelism=20 \
+	    -auto-approve
+	@echo ""
+	@echo "=== Stage 2: Installing Helm charts (cert-manager, OTel, LGTM, Karpenter) ==="
+	cd terraform && \
+	  terraform apply \
+	    -var="deploy_observability_stack=true" \
+	    -parallelism=20 \
+	    -auto-approve
+
+k8s-create-infra: ## Stage 1 only — provision EKS infra without Helm charts (for re-runs)
+	@echo "=== Stage 1 only: EKS infra ==="
+	cd terraform && terraform init -upgrade && \
+	  terraform apply $(INFRA_TARGETS) \
+	    -parallelism=20 \
+	    -auto-approve
+
+k8s-create-helm: ## Stage 2 only — install/upgrade Helm charts (assumes EKS is already up)
+	@echo "=== Stage 2 only: Helm charts ==="
+	cd terraform && \
+	  terraform apply \
+	    -var="deploy_observability_stack=true" \
+	    -parallelism=20 \
+	    -auto-approve
+
+k8s-destroy: ## Destroy all AWS resources
+	cd terraform && terraform destroy \
+	  -var="deploy_observability_stack=true" \
+	  -parallelism=20 \
+	  -auto-approve
 
 k8s-context:
 	aws eks update-kubeconfig --region $(AWS_REGION) --name $(APPS_CLUSTER) --alias $(APPS_CLUSTER)

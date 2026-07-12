@@ -25,6 +25,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: lgtm-grafana
+                name: grafana
                 port:
                   number: 80

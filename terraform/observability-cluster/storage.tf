@@ -80,28 +80,28 @@ resource "aws_iam_role_policy_attachment" "grafana_stack_s3_attach" {
   policy_arn = aws_iam_policy.grafana_stack_s3.arn
 }
 
-# 4. EKS Pod Identity Associations for the LGTM Stack
-#    The lgtm-distributed chart creates separate ServiceAccounts for Loki, Tempo,
-#    and Mimir, prefixed by the release name (lgtm).
-resource "aws_eks_pod_identity_association" "lgtm_loki" {
+# 4. EKS Pod Identity Associations for the Observability Stack
+#    Each individual Helm chart creates its own ServiceAccount (loki, tempo, mimir).
+resource "aws_eks_pod_identity_association" "loki" {
   cluster_name    = module.eks.cluster_name
   namespace       = "monitoring"
-  service_account = "lgtm-loki"
+  service_account = "loki"
   role_arn        = aws_iam_role.grafana_stack.arn
 }
 
-resource "aws_eks_pod_identity_association" "lgtm_tempo" {
+resource "aws_eks_pod_identity_association" "tempo" {
   cluster_name    = module.eks.cluster_name
   namespace       = "monitoring"
-  service_account = "lgtm-tempo"
+  service_account = "tempo"
   role_arn        = aws_iam_role.grafana_stack.arn
 }
 
-resource "aws_eks_pod_identity_association" "lgtm_mimir" {
+resource "aws_eks_pod_identity_association" "mimir" {
   cluster_name    = module.eks.cluster_name
   namespace       = "monitoring"
-  service_account = "lgtm-mimir"
+  service_account = "mimir"
   role_arn        = aws_iam_role.grafana_stack.arn
 }
+
 
 

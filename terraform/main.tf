@@ -25,13 +25,20 @@ module "apps_workload_cluster_1" {
   cluster_name = "apps-workload-cluster-1"
 }
 
+variable "deploy_observability_stack" {
+  description = "Whether to deploy the observability Helm charts (Loki, Tempo, Mimir, Grafana)"
+  type        = bool
+  default     = false
+}
+
 # ==============================================================================
 # 2. Instantiate Monitoring (OTel/LGTM) EKS Cluster Module
 # ==============================================================================
 module "observability_cluster" {
-  source       = "./observability-cluster"
-  aws_region   = "us-east-1"
-  cluster_name = "observability-cluster"
+  source                     = "./observability-cluster"
+  aws_region                 = "us-east-1"
+  cluster_name               = "observability-cluster"
+  deploy_observability_stack = var.deploy_observability_stack
 }
 
 # ==============================================================================

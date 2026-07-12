@@ -28,10 +28,13 @@ resource "helm_release" "cert_manager" {
   wait          = true
   atomic        = true
   wait_for_jobs = true
-  timeout       = 300
+  timeout       = 600 # fresh spot nodes need time to pull images + run startupapicheck Job
 
+  # installCRDs is the correct value name for cert-manager v1.14.x.
+  # crds.enabled was introduced in v1.15+. Using the wrong key silently
+  # skips CRD installation, causing OTel Operator webhook to fail.
   set {
-    name  = "crds.enabled"
+    name  = "installCRDs"
     value = "true"
   }
 
@@ -138,10 +141,11 @@ resource "helm_release" "aws_lb_controller" {
   depends_on = [helm_release.cert_manager, module.eks, aws_eks_pod_identity_association.aws_lb_controller]
 }
 
-# 3.1 AWS LB Controller — IAM (pinned policy URL for stability)
+# 3.1 AWS LB Controller — IAM
 data "http" "aws_lb_controller_iam_policy" {
-  url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.7.2/docs/install/iam_policy.json"
+  url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json"
 }
+
 
 resource "aws_iam_policy" "aws_lb_controller" {
   name        = "${var.cluster_name}-aws-lb-controller-policy"
@@ -204,7 +208,7 @@ resource "helm_release" "lgtm" {
   wait    = true
   timeout = 600
 
-  # ── Loki ─────────────────────────────────────────────────────────────────
+  # ── S3 storage config (using sets for simple direct injection) ─────────────
   set {
     name  = "loki.loki.storage.type"
     value = "s3"
@@ -238,7 +242,6 @@ resource "helm_release" "lgtm" {
     value = "false"
   }
 
-  # ── Tempo ────────────────────────────────────────────────────────────────
   set {
     name  = "tempo.tempo.storage.trace.backend"
     value = "s3"
@@ -256,7 +259,6 @@ resource "helm_release" "lgtm" {
     value = var.aws_region
   }
 
-  # ── Mimir ────────────────────────────────────────────────────────────────
   set {
     name  = "mimir.mimir.structuredConfig.blocks_storage.backend"
     value = "s3"
@@ -278,6 +280,10 @@ resource "helm_release" "lgtm" {
     value = aws_s3_bucket.mimir_alertmanager.bucket
   }
   set {
+    name  = "mimir.mimir.structuredConfig.alertmanager_storage.s3.endpoint"
+    value = "s3.${var.aws_region}.amazonaws.com"
+  }
+  set {
     name  = "mimir.mimir.structuredConfig.ruler_storage.backend"
     value = "s3"
   }
@@ -286,18 +292,307 @@ resource "helm_release" "lgtm" {
     value = aws_s3_bucket.mimir_ruler.bucket
   }
   set {
+    name  = "mimir.mimir.structuredConfig.ruler_storage.s3.endpoint"
+    value = "s3.${var.aws_region}.amazonaws.com"
+  }
+  set {
     name  = "mimir.minio.enabled"
     value = "false"
   }
 
-  # ── Grafana datasources ───────────────────────────────────────────────────
+
+  # ── Stack Component Tuning and Resource Management ────────────────────────
   values = [
     yamlencode({
+      # 1. Loki Sub-chart overrides
+      loki = {
+        loki = {
+          commonConfig = {
+            replication_factor = 1
+          }
+        }
+        ingester = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "50m"
+              memory = "256Mi"
+            }
+            limits = {
+              memory = "512Mi"
+            }
+          }
+        }
+        querier = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "25m"
+              memory = "128Mi"
+            }
+            limits = {
+              memory = "256Mi"
+            }
+          }
+        }
+        queryFrontend = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        distributor = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        compactor = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "25m"
+              memory = "128Mi"
+            }
+            limits = {
+              memory = "256Mi"
+            }
+          }
+        }
+      }
+
+      # 2. Tempo Sub-chart overrides
+      tempo = {
+        distributor = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        ingester = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "50m"
+              memory = "128Mi"
+            }
+            limits = {
+              memory = "256Mi"
+            }
+          }
+        }
+        querier = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "25m"
+              memory = "128Mi"
+            }
+            limits = {
+              memory = "256Mi"
+            }
+          }
+        }
+        queryFrontend = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        compactor = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        metricsGenerator = {
+          enabled = false
+        }
+      }
+
+      # 3. Mimir Sub-chart overrides
+      mimir = {
+        mimir = {
+          structuredConfig = {
+            ingester = {
+              ring = {
+                replication_factor = 1
+              }
+            }
+          }
+        }
+        ingester = {
+          replicas = 1
+          zoneAwareReplication = {
+            enabled = false
+          }
+          resources = {
+            requests = {
+              cpu    = "100m"
+              memory = "512Mi"
+            }
+            limits = {
+              memory = "1Gi"
+            }
+          }
+        }
+        store_gateway = {
+          replicas = 1
+          zoneAwareReplication = {
+            enabled = false
+          }
+          resources = {
+            requests = {
+              cpu    = "25m"
+              memory = "256Mi"
+            }
+            limits = {
+              memory = "512Mi"
+            }
+          }
+        }
+        distributor = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        querier = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "25m"
+              memory = "128Mi"
+            }
+            limits = {
+              memory = "256Mi"
+            }
+          }
+        }
+        query_frontend = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        query_scheduler = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        compactor = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "25m"
+              memory = "256Mi"
+            }
+            limits = {
+              memory = "512Mi"
+            }
+          }
+        }
+        alertmanager = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "64Mi"
+            }
+            limits = {
+              memory = "128Mi"
+            }
+          }
+        }
+        ruler = {
+          replicas = 1
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "128Mi"
+            }
+            limits = {
+              memory = "256Mi"
+            }
+          }
+        }
+        overrides_exporter = {
+          resources = {
+            requests = {
+              cpu    = "10m"
+              memory = "32Mi"
+            }
+            limits = {
+              memory = "64Mi"
+            }
+          }
+        }
+      }
+
+      # 4. Grafana Sub-chart overrides
       grafana = {
         sidecar = {
           dashboards = {
             enabled = true
             label   = "grafana_dashboard"
+          }
+        }
+        resources = {
+          requests = {
+            cpu    = "25m"
+            memory = "128Mi"
+          }
+          limits = {
+            memory = "256Mi"
           }
         }
         datasources = {
@@ -349,10 +644,13 @@ resource "helm_release" "lgtm" {
 
   depends_on = [
     module.eks,
-    aws_eks_pod_identity_association.lgtm,
+    aws_eks_pod_identity_association.lgtm_loki,
+    aws_eks_pod_identity_association.lgtm_tempo,
+    aws_eks_pod_identity_association.lgtm_mimir,
     helm_release.cert_manager,
   ]
 }
+
 
 # ==============================================================================
 # Karpenter

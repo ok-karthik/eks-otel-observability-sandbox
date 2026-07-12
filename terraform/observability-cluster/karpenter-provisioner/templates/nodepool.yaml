@@ -23,6 +23,6 @@ spec:
     cpu: "{{ .Values.cpuLimit }}"
     memory: "{{ .Values.memoryLimit }}"
   disruption:
-    consolidationPolicy: WhenUnderutilized
+    consolidationPolicy: WhenEmptyOrUnderutilized
     consolidateAfter: 30s
     expireAfter: 720h

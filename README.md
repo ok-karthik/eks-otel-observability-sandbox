@@ -48,12 +48,11 @@ terraform/
 make k8s-create        # Provision EKS clusters and shared AWS infrastructure
 make k8s-context       # Configure kubeconfig contexts
 make k8s-deploy-all    # Deploy observability stack, collectors, and apps
-make k8s-dashboards    # Port-forward Grafana to http://localhost:3000
 ```
 
 ## At Enterprise Scale
 
-Deploy this pattern per region:
+See [architecture-decisions-and-tradeoffs.md](./architecture-decisions-and-tradeoffs.md) for the scale tradeoffs
 
 - Application clusters run lightweight DaemonSet collectors for local enrichment and buffering.
 - Dedicated regional observability clusters run gateway fleets on isolated node groups.
@@ -62,7 +61,6 @@ Deploy this pattern per region:
 - Dashboard and alert templates let teams onboard through GitOps instead of platform tickets.
 - For very large bursts or backend outages, insert Kafka/MSK between ingestion and processing gateways.
 
-See [architecture-decisions-and-tradeoffs.md](./architecture-decisions-and-tradeoffs.md) for the scale tradeoffs.
 
 
 

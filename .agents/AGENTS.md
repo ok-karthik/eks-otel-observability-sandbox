@@ -2,7 +2,7 @@
 
 This file gives AI agents the project mental model, repo structure, and working rules for this OpenTelemetry observability platform demo.
 
-## Project Mental Model
+## Project Model
 
 Treat this repository as a reference implementation for an internal observability product on Amazon EKS.
 
@@ -45,7 +45,6 @@ apps-workload-cluster-1/
 observability-platform/
   README.md
   k8s-manifests/
-    grafana-lgtm.yaml
     grafana-ingress.yaml
     grafana-dashboards-configmap.yaml
     otel-collector-gateway.yaml
@@ -208,6 +207,98 @@ Default to per-region observability deployments. Avoid unnecessary cross-region 
 - When adding utility workflows, expose them through the `Makefile` when appropriate.
 - Keep docs updated when changing architecture, ports, service names, cluster names, or onboarding flows.
 
+## Terraform Provisioning Patterns
+
+### Two-stage apply (REQUIRED — do not collapse into one apply)
+
+The `make k8s-create` target runs two sequential Terraform applies:
+
+**Stage 1** — Infra only, using explicit `-target` flags for every non-Helm resource. This ensures Helm providers never connect to a not-yet-healthy EKS API server.
+
+**Stage 2** — Full `terraform apply -var="deploy_observability_stack=true"` which reconciles the Helm releases.
+
+Use `-parallelism=20` on both stages. The granular make targets are:
+
+```text
+make k8s-create          # full two-stage run (recommended)
+make k8s-create-infra    # Stage 1 only — safe to re-run after partial failure
+make k8s-create-helm     # Stage 2 only — re-runs Helm install/upgrade only
+```
+
+Never collapse Stage 1 and Stage 2 into a single `terraform apply` without `-target` guards. The Helm provider resolves `module.eks.cluster_endpoint` at plan time and will attempt to talk to the API before nodes are healthy.
+
+### Helm release reliability settings
+
+Always set these on cert-manager and OTel Operator:
+
+```hcl
+wait          = true
+atomic        = true   # rolls back on failure; keeps state clean for re-apply
+wait_for_jobs = true   # waits for cert-manager CRD install Job before marking done
+timeout       = 300
+```
+
+For LGTM stack charts (loki, tempo-distributed, mimir-distributed, grafana):
+- Use `wait = true` without `atomic = true`. Atomic rollback during a debug session destroys pods and makes it harder to inspect failure.
+- Set realistic `timeout` values: loki=600, tempo=600, mimir=900, grafana=300.
+- Pin `version` on cert-manager (currently `v1.14.5`) for repeatability.
+
+### LGTM Distributed Charts — Resource Efficiency
+
+The LGTM components use the individual distributed Helm charts (not the all-in-one) for production-grade topology. Each chart is configured for single-replica / monolithic mode to fit a demo cluster.
+
+**Loki** — `deploymentMode=SingleBinary` mode:
+```hcl
+set { name = "deploymentMode",       value = "SingleBinary" }
+set { name = "singleBinary.replicas", value = "1" }
+set { name = "read.replicas",         value = "0" }
+set { name = "write.replicas",        value = "0" }
+set { name = "backend.replicas",      value = "0" }
+set { name = "loki.commonConfig.replication_factor", value = "1" }
+```
+
+**Mimir-distributed** — Two hidden resource killers to disable:
+```hcl
+# Zone-aware replication: default creates 3× pods per component (one per zone).
+# MUST disable for a single-AZ or resource-constrained demo cluster.
+set { name = "ingester.zoneAwareReplication.enabled",     value = "false" }
+set { name = "store_gateway.zoneAwareReplication.enabled", value = "false" }
+# Without this, Mimir requires 3 ingesters for quorum and rejects all writes.
+set { name = "mimir.structuredConfig.ingester.ring.replication_factor", value = "1" }
+```
+
+**Tempo-distributed** — disable metricsGenerator (needs Prometheus remote-write):
+```hcl
+set { name = "metricsGenerator.enabled", value = "false" }
+```
+
+**S3 IAM** — always include `s3:GetBucketLocation` in the S3 policy. Loki single-binary calls this on startup to resolve the region and will crash-loop with a 403 without it.
+
+### Karpenter
+
+- **Karpenter is deployed only on the observability cluster.** The apps cluster does not need it — it runs two app containers and a DaemonSet collector that fit within a single t3.medium managed node group.
+- Karpenter chart is pinned to `1.0.6` (stable v1 release).
+- CRD API versions in `karpenter-provisioner/templates/`:
+  - NodePool: `karpenter.sh/v1` (not v1beta1)
+  - EC2NodeClass: `karpenter.k8s.aws/v1` (not v1beta1)
+  - AMI: use `amiSelectorTerms: [{alias: al2023@latest}]` — not `amiFamily: Bottlerocket`
+
+### EKS Add-ons
+
+Always include `coredns` in `cluster_addons` on the observability cluster. In-cluster DNS must be healthy before Helm webhook admission calls fire (cert-manager, OTel Operator rely on it).
+
+```hcl
+cluster_addons = {
+  coredns                = { most_recent = true }
+  eks-pod-identity-agent = { most_recent = true }
+  aws-ebs-csi-driver     = { most_recent = true }
+}
+```
+
+### Node Group lifecycle protection
+
+Add `lifecycle.ignore_changes = ["scaling_config[0].desired_size"]` to managed node groups that are also managed by Karpenter. Without this, Karpenter-driven scaling changes the desired count in AWS, and the next `terraform apply` tries to reset it — causing a node group update that can disrupt in-flight Helm installs.
+
 ## Productization Direction
 
 When asked how to make this a reusable platform product, favor these additions:
@@ -225,3 +316,4 @@ The key platform story is:
 Developers declare observability intent in Git.
 The platform renders standard instrumentation, dashboards, alerts, routing, and cost controls.
 ```
+
